@@ -1,0 +1,14 @@
+**/.git
+**/.gitignore
+**/node_modules
+**/.env
+**/.env.local
+**/README.md
+**/logs
+**/*.db
+**/*.db-journal
+**/.DS_Store
+**/build
+**/dist
+**/.idea
+**/.vscode

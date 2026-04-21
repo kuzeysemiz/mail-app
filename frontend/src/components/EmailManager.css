@@ -1,0 +1,309 @@
+.email-manager {
+  background: white;
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.email-manager h2 {
+  color: #333;
+  margin-bottom: 20px;
+  border-bottom: 2px solid #667eea;
+  padding-bottom: 10px;
+}
+
+.controls {
+  display: flex;
+  gap: 15px;
+  margin-bottom: 20px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.select-group {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.select-group label {
+  color: #666;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.select-group select {
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.select-group select:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.email-count {
+  color: #666;
+  font-weight: 600;
+  margin-left: auto;
+}
+
+.message {
+  background: #d4edda;
+  color: #155724;
+  padding: 12px 15px;
+  border-radius: 4px;
+  margin-bottom: 20px;
+  border: 1px solid #c3e6cb;
+}
+
+.loading,
+.empty {
+  text-align: center;
+  padding: 40px 20px;
+  color: #999;
+  font-size: 16px;
+}
+
+.emails-list {
+  display: grid;
+  gap: 15px;
+}
+
+.email-card {
+  border: 1px solid #e9ecef;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.view-mode,
+.edit-mode {
+  padding: 15px;
+}
+
+.email-card .header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.email-card .email-card .recipient strong {
+  color: #333;
+}
+
+.email-card .schedule {
+  display: flex;
+  gap: 15px;
+  color: #666;
+  font-size: 14px;
+}
+
+.email-card .date {
+  font-weight: 600;
+}
+
+.email-card .time {
+  background: #f0f4ff;
+  padding: 2px 8px;
+  border-radius: 3px;
+  color: #667eea;
+  font-weight: 600;
+}
+
+.email-card .subject {
+  background: #f9f9f9;
+  padding: 10px;
+  border-radius: 4px;
+  margin-bottom: 8px;
+  font-size: 13px;
+  color: #555;
+}
+
+.email-card .subject strong {
+  color: #333;
+  margin-right: 5px;
+}
+
+.email-card .content {
+  background: #f9f9f9;
+  padding: 10px;
+  border-radius: 4px;
+  margin-bottom: 12px;
+  font-size: 13px;
+  color: #666;
+  max-height: 60px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.email-card .content p {
+  margin: 0;
+}
+
+.email-card .actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.email-card .actions button {
+  padding: 6px 12px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+
+.email-card .edit-btn {
+  background: #ffc107;
+  color: white;
+}
+
+.email-card .edit-btn:hover {
+  background: #e0a800;
+}
+
+.email-card .send-btn {
+  background: #28a745;
+  color: white;
+}
+
+.email-card .send-btn:hover {
+  background: #218838;
+}
+
+.email-card .delete-btn {
+  background: #dc3545;
+  color: white;
+}
+
+.email-card .delete-btn:hover {
+  background: #c82333;
+}
+
+.edit-mode {
+  background: #f8f9fa;
+  padding: 15px;
+}
+
+.edit-mode .form-group {
+  margin-bottom: 15px;
+}
+
+.edit-mode label {
+  display: block;
+  margin-bottom: 5px;
+  color: #666;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.edit-mode input,
+.edit-mode textarea {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+  font-family: inherit;
+}
+
+.edit-mode input:focus,
+.edit-mode textarea:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+/* Quill Editor Stilizasyonu */
+.ql-container {
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+  background: white;
+}
+
+.ql-editor {
+  min-height: 200px;
+  padding: 12px;
+}
+
+.ql-toolbar {
+  border: 1px solid #ddd;
+  border-bottom: none;
+  border-radius: 4px 4px 0 0;
+  background: #f9f9f9;
+}
+
+.ql-toolbar button {
+  color: #666;
+}
+
+.ql-toolbar button:hover,
+.ql-toolbar button.ql-active,
+.ql-toolbar button:focus {
+  color: #667eea;
+}
+
+.edit-buttons {
+  display: flex;
+  gap: 10px;
+}
+
+.save-btn {
+  background: #28a745;
+  color: white;
+  padding: 8px 16px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.save-btn:hover {
+  background: #218838;
+}
+
+.cancel-btn {
+  background: #6c757d;
+  color: white;
+  padding: 8px 16px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.cancel-btn:hover {
+  background: #5a6268;
+}
+
+.badge {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 3px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.badge-pending {
+  background: #fff3cd;
+  color: #856404;
+}
+
+.badge-success {
+  background: #d4edda;
+  color: #155724;
+}
+
+.badge-danger {
+  background: #f8d7da;
+  color: #721c24;
+}

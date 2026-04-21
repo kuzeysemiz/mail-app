@@ -1,0 +1,28 @@
+# Dependencies
+node_modules/
+
+# Environment Variables
+.env
+.env.*
+!.env.example
+!.env.production.example
+
+# Database
+backend/mail_scheduler.db
+
+# Logs
+backend/logs/
+
+# Build outputs
+frontend/build/
+dist/
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# IDE / Editor
+.vscode/
+.idea/
+*.swp
+*.swo

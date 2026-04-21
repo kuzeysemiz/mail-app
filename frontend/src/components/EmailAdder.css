@@ -1,0 +1,463 @@
+.email-adder {
+  background: white;
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.email-adder h2 {
+  color: #333;
+  margin-bottom: 20px;
+  border-bottom: 2px solid #667eea;
+  padding-bottom: 10px;
+}
+
+.email-adder form {
+  margin-bottom: 20px;
+}
+
+/* Quill editor - Tab navigasyon'dan hariç tut */
+.email-adder .ql-container {
+  pointer-events: none;
+}
+
+.email-adder .ql-container * {
+  pointer-events: auto;
+}
+
+.email-adder .ql-editor {
+  outline: none;
+}
+
+.email-adder .form-group {
+  margin-bottom: 20px;
+}
+
+.email-adder label {
+  display: block;
+  margin-bottom: 8px;
+  color: #666;
+  font-weight: 600;
+}
+
+.email-adder select,
+.email-adder textarea,
+.email-adder input {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+  font-family: inherit;
+}
+
+.email-adder select:focus,
+.email-adder textarea:focus,
+.email-adder input:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.email-adder textarea {
+  resize: vertical;
+}
+
+.email-adder small {
+  display: block;
+  margin-top: 5px;
+  color: #999;
+  font-size: 12px;
+}
+
+/* Quill Editor Stilizasyonu */
+.email-adder .form-group {
+  position: relative;
+  z-index: 1;
+}
+
+.ql-container {
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+  background: white;
+  position: relative;
+  z-index: 2;
+}
+
+.ql-editor {
+  min-height: 200px;
+  padding: 12px;
+}
+
+.ql-toolbar {
+  border: 1px solid #ddd;
+  border-bottom: none;
+  border-radius: 4px 4px 0 0;
+  background: #f9f9f9;
+  position: relative;
+  z-index: 3;
+}
+
+.ql-toolbar button {
+  color: #666;
+  position: relative;
+  z-index: 4;
+}
+
+.ql-toolbar button:hover,
+.ql-toolbar button.ql-active,
+.ql-toolbar button:focus {
+  color: #667eea;
+}
+
+/* Quill Picker/Dropdown z-index */
+.ql-picker,
+.ql-color-picker,
+.ql-icon-picker {
+  position: relative;
+  z-index: 100;
+}
+
+.email-adder .form-group:last-child .ql-container {
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  margin-bottom: 0;
+  z-index: 2;
+}
+
+.email-adder .form-group:last-child .ql-editor {
+  min-height: 150px;
+}
+
+.email-adder form {
+  position: relative;
+  z-index: 1;
+}
+
+/* Signature Group */
+.email-adder .signature-group .ql-container {
+  z-index: 2;
+}
+
+.email-adder .signature-group .ql-editor {
+  min-height: 120px;
+  max-height: 200px;
+}
+
+.email-adder .signature-group {
+  margin-bottom: 20px;
+  position: relative;
+  z-index: 2;
+}
+
+.email-adder .submit-btn {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  padding: 12px 30px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 600;
+  transition: transform 0.2s, box-shadow 0.2s;
+  margin-top: 10px;
+  position: relative;
+  z-index: 10;
+}
+
+.email-adder .submit-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.email-adder .submit-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.email-adder .message {
+  padding: 12px 15px;
+  border-radius: 4px;
+  margin-bottom: 20px;
+  font-weight: 500;
+}
+
+.email-adder .message.success {
+  background: #d4edda;
+  color: #155724;
+  border: 1px solid #c3e6cb;
+}
+
+.email-adder .message.error {
+  background: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f5c6cb;
+}
+
+.preview-schedule {
+  background: #f8f9fa;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 15px;
+  margin-top: 20px;
+}
+
+.preview-schedule h3 {
+  color: #333;
+  margin-bottom: 15px;
+  font-size: 16px;
+}
+
+.preview-schedule table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.preview-schedule th {
+  background: #e9ecef;
+  padding: 10px;
+  text-align: left;
+  font-weight: 600;
+  color: #333;
+  border-bottom: 1px solid #ddd;
+}
+
+.preview-schedule td {
+  padding: 10px;
+  border-bottom: 1px solid #eee;
+}
+
+.preview-schedule tr:hover {
+  background: #fff;
+}
+
+.more-info {
+  text-align: center;
+  color: #666;
+  margin-top: 10px;
+  font-size: 14px;
+  font-style: italic;
+}
+
+/* Resizable Image Styles */
+.ql-editor .resizable-image {
+  max-width: 100%;
+  height: auto;
+  border-radius: 4px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  transition: box-shadow 0.2s ease;
+}
+
+.ql-editor .resizable-image:hover {
+  box-shadow: 0 4px 8px rgba(102, 126, 234, 0.3);
+}
+
+.ql-editor div[style*="position: relative"] {
+  display: inline-block;
+  margin: 10px 5px;
+}
+
+.ql-editor div[style*="position: relative"] div[style*="cursor: nwse-resize"] {
+  transition: background-color 0.2s ease;
+}
+
+.ql-editor div[style*="position: relative"] div[style*="cursor: nwse-resize"]:hover {
+  background-color: #764ba2 !important;
+}
+
+/* Image styling in Quill editor */
+.ql-editor img {
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  max-width: 100%;
+  height: auto;
+  border-radius: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: 1px solid transparent;
+  position: relative;
+}
+
+.ql-editor img:hover {
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+  border: 1px solid #667eea;
+}
+
+/* Selected image indication */
+.ql-editor img.selected {
+  outline: 2px solid #667eea;
+  outline-offset: 2px;
+  border: 1px solid #667eea;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.5);
+}
+
+/* Resize handle styling */
+.resize-handle {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  background-color: #667eea;
+  border: 2px solid white;
+  border-radius: 50%;
+  cursor: nwse-resize;
+  z-index: 1000;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* Corner positions */
+.resize-handle.nw { top: -6px; left: -6px; cursor: nw-resize; }
+.resize-handle.ne { top: -6px; right: -6px; cursor: ne-resize; }
+.resize-handle.sw { bottom: -6px; left: -6px; cursor: sw-resize; }
+.resize-handle.se { bottom: -6px; right: -6px; cursor: se-resize; }
+
+/* Visibility on hover */
+.resize-handle {
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.ql-editor img.selected ~ .resize-handle,
+.resize-handle:hover {
+  opacity: 1;
+}
+
+/* Draft section */
+.drafts-section {
+  background: #f8f9ff;
+  border: 1px solid #e0e7ff;
+  border-radius: 8px;
+  padding: 20px;
+  margin-top: 30px;
+}
+
+.drafts-section h3 {
+  color: #333;
+  margin-bottom: 15px;
+  border-bottom: 2px solid #667eea;
+  padding-bottom: 10px;
+}
+
+.drafts-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.draft-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: white;
+  padding: 12px 15px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.draft-item:hover {
+  border-color: #667eea;
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.15);
+}
+
+.draft-item-name {
+  flex: 1;
+  font-weight: 500;
+  color: #333;
+}
+
+.draft-item-date {
+  font-size: 12px;
+  color: #999;
+  margin: 0 15px;
+}
+
+.draft-item-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.draft-btn {
+  padding: 6px 12px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: all 0.2s ease;
+}
+
+.draft-btn-load {
+  background: #667eea;
+  color: white;
+}
+
+.draft-btn-load:hover {
+  background: #5568d3;
+}
+
+.draft-btn-edit {
+  background: #4CAF50;
+  color: white;
+}
+
+.draft-btn-edit:hover {
+  background: #45a049;
+}
+
+.draft-btn-delete {
+  background: #f44336;
+  color: white;
+}
+
+.draft-btn-delete:hover {
+  background: #da190b;
+}
+
+.button-group {
+  display: flex;
+  gap: 10px;
+  margin-top: 15px;
+}
+
+.button-group button {
+  flex: 1;
+  padding: 12px;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.save-draft-btn {
+  background: #FFA500;
+  color: white;
+}
+
+.save-draft-btn:hover {
+  background: #ff8c00;
+}
+
+.submit-btn {
+  background: #667eea;
+  color: white;
+}
+
+.submit-btn:hover:not(:disabled) {
+  background: #5568d3;
+}
+
+.no-drafts {
+  text-align: center;
+  color: #999;
+  padding: 20px;
+  font-style: italic;
+}
+
+
