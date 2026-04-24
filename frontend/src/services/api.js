@@ -34,7 +34,14 @@ export const emailAPI = {
   deleteBatch: (batchId) =>
     api.delete(`/emails/batch/${batchId}`),
   sendNow: (id) =>
-    api.post(`/emails/email/${id}/send-now`)
+    api.post(`/emails/email/${id}/send-now`),
+  // Batch işlemleri
+  getBatches: (mailboxId) =>
+    api.get(`/emails/batches/${mailboxId}`),
+  getBatchEmails: (batchId) =>
+    api.get(`/emails/batch/${batchId}/emails`),
+  updateBatch: (batchId, mailSubject, mailContent, mailSignature) =>
+    api.put(`/emails/batch/${batchId}`, { mailSubject, mailContent, mailSignature })
 };
 
 // Log API'leri

@@ -24,24 +24,32 @@ class MailService {
       const attachments = [];
       const imgRegex = /<img[^>]+src="data:image\/([^;]+);base64,([^"]+)"[^>]*>/g;
       let match;
-      let imgIndex = 0;
-
+      const matches = [];
+      
+      // Tüm eşleşmeleri topla
       while ((match = imgRegex.exec(finalContent)) !== null) {
-        const mimeType = `image/${match[1]}`;
-        const base64Data = match[2];
+        matches.push({
+          fullMatch: match[0],
+          mimeType: `image/${match[1]}`,
+          base64Data: match[2],
+          extension: match[1]
+        });
+      }
+
+      // Her eşleşme için attachment oluştur ve HTML güncelle
+      matches.forEach((imgMatch, imgIndex) => {
         const cid = `image-${imgIndex}@cid`;
 
         // Base64'ü Buffer'a çevir
         attachments.push({
-          filename: `image-${imgIndex}.${match[1]}`,
-          content: Buffer.from(base64Data, 'base64'),
+          filename: `image-${imgIndex}.${imgMatch.extension}`,
+          content: Buffer.from(imgMatch.base64Data, 'base64'),
           cid: cid
         });
 
         // HTML'deki base64 resmi CID referansı ile değiştir
-        finalContent = finalContent.replace(match[0], `<img src="cid:${cid}" style="max-width: 100%; height: auto; border-radius: 4px;" />`);
-        imgIndex++;
-      }
+        finalContent = finalContent.replace(imgMatch.fullMatch, `<img src="cid:${cid}" style="max-width: 100%; height: auto; border-radius: 4px;" />`);
+      })
 
       const mailOptions = {
         from: this.senderEmail,
@@ -53,7 +61,7 @@ class MailService {
       };
 
       const info = await this.transporter.sendMail(mailOptions);
-      logger.info(`Mail gönderildi: ${recipientEmail}`, { messageId: info.messageId, imageCount: imgIndex });
+      logger.info(`Mail gönderildi: ${recipientEmail}`, { messageId: info.messageId, imageCount: matches.length });
       return { success: true, messageId: info.messageId };
     } catch (error) {
       logger.error(`Mail gönderme hatası (${recipientEmail}):`, { error: error.message });

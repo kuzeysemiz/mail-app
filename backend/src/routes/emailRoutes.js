@@ -226,4 +226,110 @@ router.delete('/batch/:batchId', (req, res) => {
   );
 });
 
+// Mailbox'ın tüm batch'lerini listele (toplu mail listesi)
+router.get('/batches/:mailboxId', (req, res) => {
+  const { mailboxId } = req.params;
+
+  db.all(
+    `SELECT 
+       batchId,
+       COUNT(*) as totalCount,
+       SUM(CASE WHEN status = 'sent' THEN 1 ELSE 0 END) as sentCount,
+       SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pendingCount,
+       SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END) as failedCount,
+       MIN(createdAt) as createdAt,
+       MAX(scheduledDate) as lastScheduledDate,
+       mailSubject
+     FROM emails 
+     WHERE mailboxId = ? AND batchId IS NOT NULL
+     GROUP BY batchId
+     ORDER BY createdAt DESC`,
+    [mailboxId],
+    (err, rows) => {
+      if (err) {
+        return res.status(500).json({ error: 'Veritabanı hatası' });
+      }
+      res.json(rows);
+    }
+  );
+});
+
+// Batch'in tüm email'lerini detaylı olarak getir
+router.get('/batch/:batchId/emails', (req, res) => {
+  const { batchId } = req.params;
+
+  db.all(
+    `SELECT * FROM emails WHERE batchId = ? ORDER BY scheduledDate ASC, scheduledTime ASC`,
+    [batchId],
+    (err, rows) => {
+      if (err) {
+        return res.status(500).json({ error: 'Veritabanı hatası' });
+      }
+      res.json(rows);
+    }
+  );
+});
+
+// Batch'in tüm email'lerini güncelle (mailSubject, mailContent, mailSignature)
+router.put('/batch/:batchId', (req, res) => {
+  const { batchId } = req.params;
+  const { mailSubject, mailContent, mailSignature } = req.body;
+
+  if (!mailSubject && !mailContent && !mailSignature) {
+    return res.status(400).json({ error: 'Güncellenecek alan yok' });
+  }
+
+  const updates = [];
+  const values = [];
+
+  if (mailSubject) {
+    updates.push('mailSubject = ?');
+    values.push(mailSubject);
+  }
+  if (mailContent) {
+    updates.push('mailContent = ?');
+    values.push(mailContent);
+  }
+  if (mailSignature !== undefined) {
+    updates.push('mailSignature = ?');
+    values.push(mailSignature);
+  }
+
+  values.push(batchId);
+
+  db.run(
+    `UPDATE emails SET ${updates.join(', ')} WHERE batchId = ?`,
+    values,
+    function(err) {
+      if (err) {
+        return res.status(500).json({ error: 'Veritabanı hatası' });
+      }
+      if (this.changes === 0) {
+        return res.status(404).json({ error: 'Batch bulunamadı' });
+      }
+
+      // Tüm email'leri reschedule et
+      db.all(
+        `SELECT e.id, e.mailboxId, e.recipientEmail, e.mailContent, 
+                e.scheduledTime, e.scheduledDate, m.email, m.appPassword
+         FROM emails e
+         JOIN mailboxes m ON e.mailboxId = m.id
+         WHERE e.batchId = ?`,
+        [batchId],
+        (err, rows) => {
+          if (!err && rows) {
+            rows.forEach(row => {
+              schedulerService.cancelEmail(row.id);
+              schedulerService.scheduleEmail(row);
+            });
+          }
+        }
+      );
+
+      res.json({ message: 'Batch başarıyla güncellendi', updatedCount: this.changes });
+      logger.info(`Batch güncellendi: ${batchId}`, { updatedCount: this.changes });
+    }
+  );
+});
+
 module.exports = router;

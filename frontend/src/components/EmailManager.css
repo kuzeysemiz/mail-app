@@ -307,3 +307,152 @@
   background: #f8d7da;
   color: #721c24;
 }
+
+/* BATCH STİLERİ */
+.batches-list {
+  display: grid;
+  gap: 15px;
+}
+
+.batch-card {
+  border: 2px solid #e9ecef;
+  border-radius: 8px;
+  overflow: hidden;
+  background: white;
+  transition: all 0.3s;
+}
+
+.batch-card:hover {
+  border-color: #667eea;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+}
+
+.batch-card .view-mode {
+  padding: 15px;
+}
+
+.batch-card .header {
+  margin-bottom: 12px;
+}
+
+.batch-info {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.batch-info strong {
+  color: #667eea;
+  font-size: 14px;
+}
+
+.batch-subject {
+  color: #333;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.batch-card .stats {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.batch-card .stat {
+  padding: 6px 10px;
+  border-radius: 4px;
+  font-size: 13px;
+  background: #f8f9fa;
+  color: #666;
+  border: 1px solid #e9ecef;
+}
+
+.batch-card .stat strong {
+  color: #333;
+  margin-right: 4px;
+}
+
+.batch-card .dates {
+  display: flex;
+  gap: 12px;
+  font-size: 13px;
+  color: #666;
+  margin-bottom: 12px;
+  padding: 8px;
+  background: #f9f9f9;
+  border-radius: 4px;
+}
+
+.batch-buttons {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.btn {
+  padding: 8px 12px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+
+.btn-primary {
+  background: #667eea;
+  color: white;
+}
+
+.btn-primary:hover {
+  background: #5568d3;
+}
+
+.btn-secondary {
+  background: #6c757d;
+  color: white;
+  padding: 8px 16px;
+}
+
+.btn-secondary:hover {
+  background: #5a6268;
+}
+
+.btn-edit {
+  background: #ffc107;
+  color: white;
+}
+
+.btn-edit:hover {
+  background: #e0a800;
+}
+
+.btn-danger {
+  background: #dc3545;
+  color: white;
+}
+
+.btn-danger:hover {
+  background: #c82333;
+}
+
+.btn-success {
+  background: #28a745;
+  color: white;
+}
+
+.btn-success:hover {
+  background: #218838;
+}
+
+.email-card .buttons {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.email-card .buttons .btn {
+  padding: 6px 10px;
+  font-size: 12px;
+}
