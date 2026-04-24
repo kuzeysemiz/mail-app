@@ -8,7 +8,7 @@ module.exports = {
       exec_mode: 'cluster',
       env: {
         NODE_ENV: 'production',
-        PORT: 5000
+        PORT: 10001
       },
       // Error/Out logs
       error_file: './logs/api.error.log',
@@ -31,7 +31,7 @@ module.exports = {
     {
       name: 'mail-web',
       script: 'serve',
-      args: '-s build -l 3000',
+      args: '-s build -l 10000',
       cwd: './frontend',
       instances: 1,
       env: {

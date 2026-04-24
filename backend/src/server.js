@@ -12,7 +12,7 @@ const logRoutes = require('./routes/logRoutes');
 const draftRoutes = require('./routes/draftRoutes');
 
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 10001;
 
 // Middleware
 app.use(cors());
