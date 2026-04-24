@@ -33,7 +33,7 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        - REACT_APP_API_URL=http://api:10001/api
+        - REACT_APP_API_URL=/api
     container_name: mail_web
     restart: always
     ports:
