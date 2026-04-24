@@ -4,11 +4,17 @@ const logger = require('../middleware/logger');
 class MailService {
   constructor(gmailEmail, appPassword) {
     this.transporter = nodemailer.createTransport({
-      service: 'gmail',
+      host: 'smtp.gmail.com',
+      port: 587,
+      secure: false, // STARTTLS
+      family: 4,     // IPv4 zorla (Docker bridge IPv6 desteklemiyor)
       auth: {
         user: gmailEmail,
         pass: appPassword
-      }
+      },
+      connectionTimeout: 15000,
+      greetingTimeout: 10000,
+      socketTimeout: 15000
     });
     this.senderEmail = gmailEmail;
   }
