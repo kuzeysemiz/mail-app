@@ -5,19 +5,11 @@ const MailService = require('../services/mailService');
 const logger = require('../middleware/logger');
 
 // Mailbox oluştur/ekle
-router.post('/mailbox', async (req, res) => {
+router.post('/mailbox', (req, res) => {
   const { email, appPassword } = req.body;
 
   if (!email || !appPassword) {
     return res.status(400).json({ error: 'Email ve uygulama şifresi gereklidir' });
-  }
-
-  // Gmail bağlantısını doğrula
-  const mailService = new MailService(email, appPassword);
-  const isConnected = await mailService.verifyConnection();
-
-  if (!isConnected) {
-    return res.status(401).json({ error: 'Gmail bağlantısı başarısız. Kimlik bilgilerini kontrol edin.' });
   }
 
   db.run(
