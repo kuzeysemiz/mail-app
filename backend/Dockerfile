@@ -12,9 +12,6 @@ FROM node:18-alpine
 
 WORKDIR /app
 
-# PM2 global yükle (production process manager)
-RUN npm install -g pm2
-
 # Builder'dan node_modules'ü kopy et
 COPY --from=builder /app/node_modules ./node_modules
 
@@ -25,11 +22,10 @@ COPY . .
 RUN mkdir -p logs
 
 # Expose port
-EXPOSE 5000
+EXPOSE 10001
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-  CMD node -e "require('http').get('http://localhost:5000/api/health', (r) => {if (r.statusCode !== 200) throw new Error(r.statusCode)})"
+  CMD node -e "require('http').get('http://localhost:10001/api/health', (r) => {if (r.statusCode !== 200) throw new Error(r.statusCode)})"
 
-# PM2 ile başlat
-CMD ["pm2-runtime", "start", "src/server.js", "--name", "mail-api", "--error", "logs/api.error.log", "--out", "logs/api.out.log"]
+CMD ["node", "src/server.js"]
