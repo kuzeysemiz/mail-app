@@ -66,12 +66,13 @@ export default function MailboxManager() {
   return (
     <div className="mailbox-manager">
       <h2>Gmail Hesabı Yönetimi</h2>
+      <p className="page-desc">Gmail SMTP üzerinden mail göndermek için hesap ekleyin.</p>
 
-      <div className="form-section">
-        <h3>Yeni Gmail Hesabı Ekle</h3>
+      <div className="card">
+        <div className="card-title">Yeni Gmail Hesabı Ekle</div>
         <form onSubmit={handleAddMailbox}>
           <div className="form-group">
-            <label>Gmail Adresi:</label>
+            <label>Gmail Adresi</label>
             <input
               type="email"
               name="email"
@@ -83,7 +84,7 @@ export default function MailboxManager() {
           </div>
 
           <div className="form-group">
-            <label>Uygulama Şifresi (16 karakter):</label>
+            <label>Uygulama Şifresi (16 karakter)</label>
             <input
               type="password"
               name="appPassword"
@@ -97,8 +98,8 @@ export default function MailboxManager() {
             </small>
           </div>
 
-          <button type="submit" disabled={loading}>
-            {loading ? 'Ekleniyor...' : 'Hesabı Ekle'}
+          <button type="submit" className="btn-primary" disabled={loading}>
+            {loading ? 'Ekleniyor...' : '+ Hesabı Ekle'}
           </button>
         </form>
       </div>
@@ -109,36 +110,38 @@ export default function MailboxManager() {
         </div>
       )}
 
-      <div className="mailboxes-list">
-        <h3>Ekli Hesaplar ({mailboxes.length})</h3>
+      <div className="card">
+        <div className="card-title">Ekli Hesaplar ({mailboxes.length})</div>
         {mailboxes.length === 0 ? (
           <p className="empty">Henüz hesap eklenmedi</p>
         ) : (
-          <table>
-            <thead>
-              <tr>
-                <th>Email</th>
-                <th>Eklenme Tarihi</th>
-                <th>İşlem</th>
-              </tr>
-            </thead>
-            <tbody>
-              {mailboxes.map(mailbox => (
-                <tr key={mailbox.id}>
-                  <td>{mailbox.email}</td>
-                  <td>{new Date(mailbox.createdAt).toLocaleDateString('tr-TR')}</td>
-                  <td>
-                    <button 
-                      className="delete-btn"
-                      onClick={() => handleDeleteMailbox(mailbox.id)}
-                    >
-                      Sil
-                    </button>
-                  </td>
+          <div className="mailboxes-list">
+            <table>
+              <thead>
+                <tr>
+                  <th>Email</th>
+                  <th>Eklenme Tarihi</th>
+                  <th>İşlem</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {mailboxes.map(mailbox => (
+                  <tr key={mailbox.id}>
+                    <td>{mailbox.email}</td>
+                    <td>{new Date(mailbox.createdAt).toLocaleDateString('tr-TR')}</td>
+                    <td>
+                      <button
+                        className="delete-btn"
+                        onClick={() => handleDeleteMailbox(mailbox.id)}
+                      >
+                        Sil
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
     </div>

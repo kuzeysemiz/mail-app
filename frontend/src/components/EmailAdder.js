@@ -20,6 +20,9 @@ export default function EmailAdder() {
   const [showDraftName, setShowDraftName] = useState(false);
   const [draftName, setDraftName] = useState('');
   const [editingDraftId, setEditingDraftId] = useState(null);
+  const [manualSchedule, setManualSchedule] = useState(false);
+  const [manualDate, setManualDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [manualTime, setManualTime] = useState('09:00');
 
   const showMessage = (msg, type = 'success') => {
     setMessage(msg);
@@ -360,10 +363,19 @@ export default function EmailAdder() {
       return;
     }
 
+    if (manualSchedule && (!manualDate || !manualTime)) {
+      showMessage('Manuel zamanlama için tarih ve saat seçin', 'error');
+      return;
+    }
+
     setLoading(true);
 
     try {
-      const response = await emailAPI.add(selectedMailbox, emailList, mailSubject, mailContent, mailSignature);
+      const response = await emailAPI.add(
+        selectedMailbox, emailList, mailSubject, mailContent, mailSignature,
+        manualSchedule ? manualDate : null,
+        manualSchedule ? manualTime : null
+      );
       showMessage(`${response.data.addedCount} email başarıyla eklendi!`, 'success');
       setPreviewSchedule(response.data.scheduledTimes || []);
       setRecipients('');
@@ -452,6 +464,40 @@ ex ample3@gmail.com"
               }
             }}
           />
+        </div>
+
+        <div className="manual-schedule-group">
+          <label className="manual-schedule-toggle">
+            <input
+              type="checkbox"
+              checked={manualSchedule}
+              onChange={(e) => setManualSchedule(e.target.checked)}
+            />
+            <span className="toggle-slider"></span>
+            <span className="toggle-label">Manuel Zamanlama</span>
+          </label>
+
+          {manualSchedule && (
+            <div className="manual-schedule-inputs">
+              <div className="manual-field">
+                <label>Tarih:</label>
+                <input
+                  type="date"
+                  value={manualDate}
+                  min={new Date().toISOString().split('T')[0]}
+                  onChange={(e) => setManualDate(e.target.value)}
+                />
+              </div>
+              <div className="manual-field">
+                <label>Saat:</label>
+                <input
+                  type="time"
+                  value={manualTime}
+                  onChange={(e) => setManualTime(e.target.value)}
+                />
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="button-group">

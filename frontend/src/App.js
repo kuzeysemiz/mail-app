@@ -1,63 +1,67 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import './App.css';
 import MailboxManager from './components/MailboxManager';
 import EmailAdder from './components/EmailAdder';
 import EmailManager from './components/EmailManager';
 import LogViewer from './components/LogViewer';
 
-function App() {
+const NAV_ITEMS = [
+  { id: 'mailbox', label: 'Gmail Hesapları', icon: '📬' },
+  { id: 'add',     label: 'Mail Ekle',       icon: '✉️'  },
+  { id: 'manage',  label: 'Yönet',           icon: '📋'  },
+  { id: 'logs',    label: 'Loglar',          icon: '📊'  },
+];
+
+const PAGE_TITLES = {
+  mailbox: 'Gmail Hesapları',
+  add:     'Mail Ekle',
+  manage:  'Mail Listeleri',
+  logs:    'Gönderim Logları',
+};
+
+export default function App() {
   const [activeTab, setActiveTab] = useState('mailbox');
 
   return (
     <div className="app">
-      <header className="app-header">
-        <div className="header-content">
-          <h1>📧 Otomatik Mail Gönderme Sistemi</h1>
-          <p className="subtitle">Gmail SMTP ile Zamanlı Toplu Mail Gönderimi</p>
+      <aside className="sidebar">
+        <div className="sidebar-logo">
+          <div className="logo-icon">📧</div>
+          <div className="logo-text">Mail<span>Sender</span></div>
         </div>
-      </header>
 
-      <div className="container">
-        <nav className="tabs">
-          <button 
-            className={`tab ${activeTab === 'mailbox' ? 'active' : ''}`}
-            onClick={() => setActiveTab('mailbox')}
-          >
-            Gmail Hesapları
-          </button>
-          <button 
-            className={`tab ${activeTab === 'add' ? 'active' : ''}`}
-            onClick={() => setActiveTab('add')}
-          >
-            Mail Ekle
-          </button>
-          <button 
-            className={`tab ${activeTab === 'manage' ? 'active' : ''}`}
-            onClick={() => setActiveTab('manage')}
-          >
-            Yönet
-          </button>
-          <button 
-            className={`tab ${activeTab === 'logs' ? 'active' : ''}`}
-            onClick={() => setActiveTab('logs')}
-          >
-            Loglar
-          </button>
+        <nav className="sidebar-nav">
+          {NAV_ITEMS.map(item => (
+            <button
+              key={item.id}
+              className={`nav-item${activeTab === item.id ? ' active' : ''}`}
+              onClick={() => setActiveTab(item.id)}
+            >
+              <span className="nav-icon">{item.icon}</span>
+              {item.label}
+            </button>
+          ))}
         </nav>
+
+        <div className="sidebar-footer">
+          © 2026 MailSender
+        </div>
+      </aside>
+
+      <div className="main-content">
+        <header className="page-header">
+          <p className="breadcrumb">
+            MailSender / <span>{PAGE_TITLES[activeTab]}</span>
+          </p>
+        </header>
 
         <div className="content">
           {activeTab === 'mailbox' && <MailboxManager />}
-          {activeTab === 'add' && <EmailAdder />}
-          {activeTab === 'manage' && <EmailManager />}
-          {activeTab === 'logs' && <LogViewer />}
+          {activeTab === 'add'     && <EmailAdder />}
+          {activeTab === 'manage'  && <EmailManager />}
+          {activeTab === 'logs'    && <LogViewer />}
         </div>
       </div>
-
-      <footer className="app-footer">
-        <p>© 2026 Otomatik Mail Gönderme Sistemi | Gmail SMTP API ile geliştirilmiştir</p>
-      </footer>
     </div>
   );
 }
-
-export default App;

@@ -7,7 +7,7 @@ const logger = require('../middleware/logger');
 
 // Mailbox'a yeni email'ler ekle (toplu)
 router.post('/emails/add', (req, res) => {
-  const { mailboxId, recipients, mailSubject, mailContent, mailSignature } = req.body;
+  const { mailboxId, recipients, mailSubject, mailContent, mailSignature, manualDate, manualTime } = req.body;
 
   if (!mailboxId || !recipients || recipients.length === 0 || !mailContent) {
     return res.status(400).json({ error: 'mailboxId, recipients (dizi) ve mailContent gereklidir' });
@@ -20,12 +20,16 @@ router.post('/emails/add', (req, res) => {
   // Batch ID oluştur (timestamp + random)
   const batchId = `batch_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
-  // Rastgele zaman dağıtımı yap
+  // Manuel zamanlama veya otomatik dağıtım
   let scheduledTimes;
-  try {
-    scheduledTimes = timeScheduleService.distributeEmailsRandomly(recipients.length, mailboxId);
-  } catch (error) {
-    return res.status(400).json({ error: error.message });
+  if (manualDate && manualTime) {
+    scheduledTimes = recipients.map(() => ({ date: manualDate, time: manualTime }));
+  } else {
+    try {
+      scheduledTimes = timeScheduleService.distributeEmailsRandomly(recipients.length, mailboxId);
+    } catch (error) {
+      return res.status(400).json({ error: error.message });
+    }
   }
 
   // Veritabanına ekle

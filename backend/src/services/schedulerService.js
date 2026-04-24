@@ -9,7 +9,6 @@ class SchedulerService {
     this.loadScheduledEmails();
   }
 
-  // Veritabanından tüm zamanlanan mailları yükle ve schedule et
   loadScheduledEmails() {
     db.all(
       `SELECT e.id, e.mailboxId, e.recipientEmail, e.mailSubject, e.mailContent, e.mailSignature,
@@ -22,42 +21,70 @@ class SchedulerService {
           logger.error('Zamanlanan maillar yüklenirken hata:', err);
           return;
         }
-
-        rows.forEach(row => {
-          this.scheduleEmail(row);
-        });
+        rows.forEach(row => this.scheduleEmail(row));
         logger.info(`${rows.length} adet email başarıyla schedule edildi`);
       }
     );
   }
 
-  // Tek bir email'i schedule et
   scheduleEmail(emailData) {
     const jobKey = `email_${emailData.id}`;
 
-    // Eğer zaten schedule edildiyse, iptal et
     if (this.jobs[jobKey]) {
       this.jobs[jobKey].cancel();
+      delete this.jobs[jobKey];
+    }
+
+    if (!emailData.scheduledDate || !emailData.scheduledTime) {
+      logger.warn(`Email ${emailData.id} için tarih/saat eksik, atlandı`);
+      return;
+    }
+
+    // Spesifik tarih+saat ile tek seferlik zamanlama
+    const scheduledAt = new Date(`${emailData.scheduledDate}T${emailData.scheduledTime}:00`);
+
+    if (isNaN(scheduledAt.getTime())) {
+      logger.warn(`Email ${emailData.id} için geçersiz tarih/saat: ${emailData.scheduledDate} ${emailData.scheduledTime}`);
+      return;
+    }
+
+    if (scheduledAt <= new Date()) {
+      logger.warn(`Email ${emailData.id} için zamanlama geçmişte (${emailData.scheduledDate} ${emailData.scheduledTime}), atlandı`);
+      return;
     }
 
     try {
-      const [hours, minutes] = emailData.scheduledTime.split(':');
-      const cronExpression = `${minutes} ${hours} * * 1-5`; // Pazartesi-Cuma
-      
-      const job = schedule.scheduleJob(cronExpression, async () => {
-        logger.info(`Zamanlanmış email gönderiliyor: ${emailData.id}`);
+      const job = schedule.scheduleJob(scheduledAt, async () => {
+        logger.info(`Zamanlanmış email gönderiliyor: ${emailData.id} (${emailData.scheduledDate} ${emailData.scheduledTime})`);
         await this.sendScheduledEmail(emailData);
+        delete this.jobs[jobKey];
       });
 
+      if (!job) {
+        logger.warn(`Email ${emailData.id} schedule edilemedi (geçmiş tarih olabilir)`);
+        return;
+      }
+
       this.jobs[jobKey] = job;
-      logger.info(`Email ${emailData.id} schedule edildi: ${emailData.scheduledTime}`);
+      logger.info(`Email ${emailData.id} schedule edildi: ${emailData.scheduledDate} ${emailData.scheduledTime}`);
     } catch (error) {
       logger.error(`Email ${emailData.id} schedule edilirken hata:`, error);
     }
   }
 
-  // Zamanlanmış email gönder
   async sendScheduledEmail(emailData) {
+    // Gönderim öncesi durumu kontrol et (tekrar gönderimi önle)
+    const currentStatus = await new Promise((resolve) => {
+      db.get(`SELECT status FROM emails WHERE id = ?`, [emailData.id], (err, row) => {
+        resolve(err || !row ? null : row.status);
+      });
+    });
+
+    if (currentStatus !== 'pending') {
+      logger.info(`Email ${emailData.id} zaten ${currentStatus} durumunda, atlandı`);
+      return;
+    }
+
     try {
       const mailService = new MailService(emailData.email, emailData.appPassword);
 
@@ -71,23 +98,15 @@ class SchedulerService {
       const today = new Date().toISOString().split('T')[0];
 
       if (result.success) {
-        // Veritabanını güncelle
-        db.run(
-          `UPDATE emails SET status = 'sent' WHERE id = ?`,
-          [emailData.id],
-          (err) => {
-            if (err) logger.error('Email durumu güncellenirken hata:', err);
-          }
-        );
-
-        // Log kaydı ekle
+        db.run(`UPDATE emails SET status = 'sent' WHERE id = ?`, [emailData.id], (err) => {
+          if (err) logger.error('Email durumu güncellenirken hata:', err);
+        });
         db.run(
           `INSERT INTO logs (emailId, mailboxId, recipientEmail, status, sentAt, day)
            VALUES (?, ?, ?, 'success', datetime('now'), ?)`,
           [emailData.id, emailData.mailboxId, emailData.recipientEmail, today]
         );
       } else {
-        // Hata log kaydı ekle
         db.run(
           `INSERT INTO logs (emailId, mailboxId, recipientEmail, status, errorMessage, sentAt, day)
            VALUES (?, ?, ?, 'failed', ?, datetime('now'), ?)`,
@@ -99,7 +118,6 @@ class SchedulerService {
     }
   }
 
-  // Email'i hemen gönder (test için)
   async sendEmailNow(emailId) {
     return new Promise((resolve, reject) => {
       db.get(
@@ -110,13 +128,8 @@ class SchedulerService {
          WHERE e.id = ?`,
         [emailId],
         async (err, row) => {
-          if (err) {
-            return reject(err);
-          }
-          if (!row) {
-            return reject(new Error('Email bulunamadı'));
-          }
-
+          if (err) return reject(err);
+          if (!row) return reject(new Error('Email bulunamadı'));
           await this.sendScheduledEmail(row);
           resolve();
         }
@@ -124,7 +137,6 @@ class SchedulerService {
     });
   }
 
-  // Email'i schedule'dan kaldır
   cancelEmail(emailId) {
     const jobKey = `email_${emailId}`;
     if (this.jobs[jobKey]) {
