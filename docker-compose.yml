@@ -16,7 +16,7 @@ services:
     ports:
       - "10001:10001"
     volumes:
-      - ./backend/mail_scheduler.db:/app/mail_scheduler.db
+      - ./backend/data:/app/data
       - ./backend/logs:/app/logs
     networks:
       - mail_network

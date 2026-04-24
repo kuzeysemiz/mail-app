@@ -19,7 +19,7 @@ COPY --from=builder /app/node_modules ./node_modules
 COPY . .
 
 # Logs ve database klasörleri oluştur
-RUN mkdir -p logs
+RUN mkdir -p logs data
 
 # Expose port
 EXPOSE 10001
