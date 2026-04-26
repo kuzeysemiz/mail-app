@@ -67,6 +67,12 @@ jobs:
               --network mail_network \
               -p 10000:10000 \
               ghcr.io/kuzeysemiz/mail-app-web:latest
+            sleep 5
+            docker ps
+            echo "--- mail_web logs ---"
+            docker logs mail_web --tail 20
+            echo "--- mail_api logs ---"
+            docker logs mail_api --tail 20
             echo "✅ Deploy tamamlandı!"
         env:
           GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
