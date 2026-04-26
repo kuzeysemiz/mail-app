@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const Anthropic = require('@anthropic-ai/sdk');
+const { GoogleGenerativeAI } = require('@google/generative-ai');
 const logger = require('../middleware/logger');
 
 function extractText(html) {
@@ -18,8 +18,8 @@ function extractImages(html) {
   let match;
   while ((match = regex.exec(html)) !== null) {
     images.push({
-      mediaType: `image/${match[2]}`,
-      base64Data: match[3]
+      mimeType: `image/${match[2]}`,
+      data: match[3]
     });
   }
   return images;
@@ -33,8 +33,7 @@ router.post('/enhance', async (req, res) => {
   }
 
   const text = extractText(content);
-  const words = text.split(/\s+/).filter(w => w.length > 0);
-  const wordCount = words.length;
+  const wordCount = text.split(/\s+/).filter(w => w.length > 0).length;
   const charCount = text.length;
 
   if (wordCount < 10 || charCount < 150) {
@@ -43,13 +42,13 @@ router.post('/enhance', async (req, res) => {
     });
   }
 
-  if (!process.env.ANTHROPIC_API_KEY) {
-    return res.status(500).json({ error: 'AI servisi yapılandırılmamış (ANTHROPIC_API_KEY eksik)' });
+  if (!process.env.GEMINI_API_KEY) {
+    return res.status(500).json({ error: 'AI servisi yapılandırılmamış (GEMINI_API_KEY eksik)' });
   }
 
   const images = extractImages(content);
 
-  const systemPrompt = mode === 'advanced' && userPrompt
+  const systemInstruction = mode === 'advanced' && userPrompt
     ? `Sen bir profesyonel e-posta yazarısın. Kullanıcının talimatlarına göre e-posta içeriğini geliştir. Sadece geliştirilmiş içeriği HTML formatında döndür (<p>, <strong>, <em>, <ul>, <li>, <br> taglarını kullanabilirsin). Ekstra açıklama veya yorum ekleme, sadece e-posta metnini döndür.`
     : `Sen bir profesyonel e-posta yazarısın. Verilen e-posta içeriğini şu kurallara göre geliştir:
 - Kurumsal ve profesyonel bir ton kullan, büyük bir şirketten yazılmış gibi hissettir
@@ -65,31 +64,22 @@ router.post('/enhance', async (req, res) => {
     : `Bu e-posta içeriğini geliştir:\n${text}`;
 
   try {
-    const contentBlocks = [];
+    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+    const model = genAI.getGenerativeModel({
+      model: 'gemini-1.5-flash',
+      systemInstruction
+    });
+
+    const parts = [];
 
     images.forEach(img => {
-      contentBlocks.push({
-        type: 'image',
-        source: {
-          type: 'base64',
-          media_type: img.mediaType,
-          data: img.base64Data
-        }
-      });
+      parts.push({ inlineData: { mimeType: img.mimeType, data: img.data } });
     });
 
-    contentBlocks.push({ type: 'text', text: userMessage });
+    parts.push({ text: userMessage });
 
-    const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-
-    const response = await client.messages.create({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 4096,
-      system: systemPrompt,
-      messages: [{ role: 'user', content: contentBlocks }]
-    });
-
-    const enhancedText = response.content[0].text.trim();
+    const result = await model.generateContent(parts);
+    const enhancedText = result.response.text().trim();
 
     const enhancedHtml = enhancedText.startsWith('<')
       ? enhancedText
