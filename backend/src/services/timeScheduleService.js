@@ -9,21 +9,20 @@ class TimeScheduleService {
     return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
   }
 
-  // Hafta içi günleri al (Pazartesi-Cuma)
+  // Sonraki 5 iş gününü al (Pazartesi-Cuma)
   getWeekdaysFromToday() {
     const days = [];
     const today = new Date();
-    
-    // Bugünden başlayarak sonraki 14 gün içinde hafta içi günleri bul
-    for (let i = 0; i < 14; i++) {
+    let i = 0;
+
+    while (days.length < 5) {
       const date = new Date(today);
       date.setDate(today.getDate() + i);
-      
       const dayOfWeek = date.getDay();
-      // 0 = Pazar, 1 = Pazartesi, ..., 5 = Cuma, 6 = Cumartesi
       if (dayOfWeek >= 1 && dayOfWeek <= 5) {
-        days.push(new Date(date));
+        days.push(date);
       }
+      i++;
     }
 
     return days;
