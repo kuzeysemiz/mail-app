@@ -1,7 +1,7 @@
 ﻿import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
-import { mailboxAPI, emailAPI, draftAPI, savedEmailsAPI } from '../services/api';
+import { mailboxAPI, emailAPI, draftAPI, savedEmailsAPI, aiAPI } from '../services/api';
 import './EmailAdder.css';
 
 export default function EmailAdder() {
@@ -29,6 +29,9 @@ export default function EmailAdder() {
   const [manualSchedule, setManualSchedule] = useState(false);
   const [manualDate, setManualDate] = useState(() => new Date().toISOString().split('T')[0]);
   const [manualTime, setManualTime] = useState('09:00');
+  const [aiLoading, setAiLoading] = useState(false);
+  const [showAdvancedAI, setShowAdvancedAI] = useState(false);
+  const [advancedPrompt, setAdvancedPrompt] = useState('');
 
   const showMessage = (msg, type = 'success') => {
     setMessage(msg);
@@ -340,6 +343,50 @@ export default function EmailAdder() {
     ));
   };
 
+  const getPlainTextFromHtml = (html) => {
+    return html
+      .replace(/<img[^>]*>/gi, '')
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/&nbsp;/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  };
+
+  const handleAIEnhance = async (mode) => {
+    if (!mailContent || !mailContent.trim() || mailContent === '<p><br></p>') {
+      showMessage('Lütfen önce mail içeriği yazın', 'error');
+      return;
+    }
+
+    const text = getPlainTextFromHtml(mailContent);
+    const wordCount = text.split(/\s+/).filter(w => w.length > 0).length;
+    const charCount = text.length;
+
+    if (wordCount < 10 || charCount < 150) {
+      showMessage(`İçerik çok kısa. En az 10 kelime ve 150 karakter gerekli (şu an: ${wordCount} kelime, ${charCount} karakter)`, 'error');
+      return;
+    }
+
+    if (mode === 'advanced' && !advancedPrompt.trim()) {
+      showMessage('Lütfen nasıl geliştirmek istediğinizi yazın', 'error');
+      return;
+    }
+
+    setAiLoading(true);
+    try {
+      const response = await aiAPI.enhance(mailContent, mode, advancedPrompt);
+      setMailContent(response.data.enhanced);
+      setShowAdvancedAI(false);
+      setAdvancedPrompt('');
+      showMessage('Mail başarıyla geliştirildi!', 'success');
+    } catch (error) {
+      const msg = error.response?.data?.error || 'AI geliştirme başarısız';
+      showMessage(msg, 'error');
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
   const handleSaveDraft = async () => {
     if (!draftName.trim()) {
       showMessage('Lütfen taslak adı girin', 'error');
@@ -537,6 +584,46 @@ example3@gmail.com"
             }}
           />
         </div>
+
+        <div className="ai-enhance-group">
+          <button
+            type="button"
+            className="ai-btn ai-btn-basic"
+            onClick={() => handleAIEnhance('basic')}
+            disabled={aiLoading}
+          >
+            {aiLoading && !showAdvancedAI ? '✦ Geliştiriliyor...' : '✦ AI ile Geliştir'}
+          </button>
+          <button
+            type="button"
+            className="ai-btn ai-btn-advanced"
+            onClick={() => setShowAdvancedAI(v => !v)}
+            disabled={aiLoading}
+          >
+            ⚙ Gelişmiş AI
+          </button>
+        </div>
+
+        {showAdvancedAI && (
+          <div className="ai-advanced-panel">
+            <label>Nasıl geliştirmek istiyorsunuz?</label>
+            <textarea
+              className="ai-prompt-textarea"
+              value={advancedPrompt}
+              onChange={(e) => setAdvancedPrompt(e.target.value)}
+              placeholder="Örn: İngilizce'ye çevir ve daha resmi bir dil kullan, ürünümüzün özelliklerini ön plana çıkar..."
+              rows="3"
+            />
+            <button
+              type="button"
+              className="ai-btn ai-btn-basic"
+              onClick={() => handleAIEnhance('advanced')}
+              disabled={aiLoading}
+            >
+              {aiLoading ? '✦ Geliştiriliyor...' : '✦ Uygula'}
+            </button>
+          </div>
+        )}
 
         <div className="form-group signature-group">
           <label>İmza (Opsiyonel):</label>
