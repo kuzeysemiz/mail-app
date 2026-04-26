@@ -152,6 +152,59 @@
   box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.12);
 }
 
+.lang-btn-wrapper {
+  display: inline-flex;
+  align-items: center;
+}
+
+.ai-btn-lang {
+  background: var(--card);
+  color: var(--primary);
+  border-color: var(--primary);
+  border-right: none;
+  border-radius: var(--radius-sm) 0 0 var(--radius-sm);
+  padding: 7px 10px;
+}
+
+.ai-btn-lang:hover:not(:disabled) {
+  background: rgba(0, 164, 135, 0.07);
+}
+
+.lang-btn-delete {
+  background: var(--card);
+  color: var(--muted);
+  border: 1px solid var(--primary);
+  border-left: none;
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  padding: 7px 7px;
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+  height: 100%;
+}
+
+.lang-btn-delete:hover {
+  background: var(--danger-bg);
+  color: var(--danger-text);
+  border-color: var(--danger-border);
+}
+
+.lang-select {
+  padding: 7px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  color: var(--muted);
+  background: var(--card);
+  cursor: pointer;
+  max-width: 120px;
+}
+
+.lang-select:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+
 .ai-btn-rules {
   background: var(--card);
   color: var(--text);

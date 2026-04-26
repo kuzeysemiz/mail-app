@@ -36,6 +36,7 @@ export default function EmailAdder() {
   const [aiRules, setAiRules] = useState([]);
   const [newRuleText, setNewRuleText] = useState('');
   const rulesPanelRef = useRef(null);
+  const [langButtons, setLangButtons] = useState([]);
 
   const showMessage = (msg, type = 'success') => {
     setMessage(msg);
@@ -353,6 +354,11 @@ export default function EmailAdder() {
         try { setAiRules(JSON.parse(r.data.value)); } catch { setAiRules([]); }
       })
       .catch(() => setAiRules([]));
+    settingsAPI.get('lang_buttons')
+      .then(r => {
+        try { setLangButtons(JSON.parse(r.data.value)); } catch { setLangButtons([]); }
+      })
+      .catch(() => setLangButtons([]));
   }, []);
 
   useEffect(() => {
@@ -385,6 +391,41 @@ export default function EmailAdder() {
 
   const handleDeleteRule = (id) => {
     saveRules(aiRules.filter(r => r.id !== id));
+  };
+
+  const saveLangButtons = async (updated) => {
+    setLangButtons(updated);
+    try { await settingsAPI.set('lang_buttons', JSON.stringify(updated)); } catch { }
+  };
+
+  const handleAddLangButton = (lang) => {
+    if (!lang) return;
+    if (langButtons.some(b => b.lang === lang)) {
+      showMessage(`${lang} zaten eklenmiş`, 'error'); return;
+    }
+    if (langButtons.length >= 5) {
+      showMessage('Maksimum 5 dil butonu eklenebilir', 'error'); return;
+    }
+    saveLangButtons([...langButtons, { id: Date.now(), lang }]);
+  };
+
+  const handleTranslate = async (lang) => {
+    if (!mailContent || mailContent === '<p><br></p>') {
+      showMessage('Lütfen önce mail içeriği yazın', 'error'); return;
+    }
+    setAiLoading(true);
+    try {
+      const response = await aiAPI.enhance(
+        mailContent, 'advanced',
+        `Bu e-postayı ${lang} diline çevir. Profesyonel tonu, yapıyı ve paragraf düzenini koru.`
+      );
+      setMailContent(response.data.enhanced);
+      showMessage(`Mail ${lang} diline çevrildi!`, 'success');
+    } catch (error) {
+      showMessage(error.response?.data?.error || 'Çeviri başarısız', 'error');
+    } finally {
+      setAiLoading(false);
+    }
   };
 
   const getPlainTextFromHtml = (html) => {
@@ -646,6 +687,39 @@ example3@gmail.com"
           >
             ⚙ Gelişmiş AI
           </button>
+          {langButtons.map(btn => (
+            <div key={btn.id} className="lang-btn-wrapper">
+              <button
+                type="button"
+                className="ai-btn ai-btn-lang"
+                onClick={() => handleTranslate(btn.lang)}
+                disabled={aiLoading}
+              >
+                {btn.lang}
+              </button>
+              <button
+                type="button"
+                className="lang-btn-delete"
+                onClick={() => saveLangButtons(langButtons.filter(b => b.id !== btn.id))}
+              >×</button>
+            </div>
+          ))}
+
+          <select
+            className="lang-select"
+            value=""
+            onChange={(e) => { handleAddLangButton(e.target.value); e.target.value = ''; }}
+          >
+            <option value="">+ Dil Ekle</option>
+            {['İngilizce','Almanca','Fransızca','İspanyolca','İtalyanca','Portekizce',
+              'Rusça','Japonca','Çince','Korece','Arapça','Hintçe','Hollandaca',
+              'Polonyaca','İsveççe','Norveççe','Danimarkaca','Fince','Çekçe','Romence',
+              'Macarca','Yunanca','İbranice','Endonezce','Malayca','Tayca','Vietnamca',
+              'Ukraynaca','Farsça','Türkçe'].map(l => (
+              <option key={l} value={l}>{l}</option>
+            ))}
+          </select>
+
           <div className="ai-rules-wrapper" ref={rulesPanelRef}>
             <button
               type="button"
