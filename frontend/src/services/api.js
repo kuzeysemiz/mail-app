@@ -76,6 +76,11 @@ export const draftAPI = {
     api.delete(`/drafts/${draftId}`)
 };
 
+// Kaydedilmiş alıcı adresleri (autocomplete)
+export const savedEmailsAPI = {
+  getAll: () => api.get('/emails/saved-emails')
+};
+
 // Settings API'leri
 export const settingsAPI = {
   get: (key) => api.get(`/settings/${key}`),

@@ -68,6 +68,61 @@
   min-height: 120px;
 }
 
+/* ─── RECIPIENT AUTOCOMPLETE ─────────────────────────────── */
+.recipient-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+.recipient-mirror {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  padding: 9px 12px;
+  font-size: 14px;
+  font-family: inherit;
+  line-height: 1.5;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  overflow: hidden;
+  box-sizing: border-box;
+  z-index: 0;
+}
+
+.ghost-suggestion {
+  color: #9ca3af;
+}
+
+.recipient-textarea {
+  position: relative;
+  z-index: 1;
+  display: block;
+}
+
+.recipient-textarea.has-suggestion {
+  background: transparent !important;
+  caret-color: var(--text, #1a1a1a);
+}
+
+.autocomplete-tooltip {
+  position: fixed;
+  z-index: 9999;
+  background: rgba(25, 25, 25, 0.82);
+  color: #fff;
+  padding: 4px 9px;
+  border-radius: 5px;
+  font-size: 11.5px;
+  white-space: nowrap;
+  pointer-events: none;
+  letter-spacing: 0.01em;
+}
+
 .email-adder small {
   display: block;
   margin-top: 5px;

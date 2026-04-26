@@ -81,6 +81,18 @@ router.post('/emails/add', (req, res) => {
   });
 });
 
+// Daha önce kullanılan tüm alıcı adresleri (autocomplete için)
+router.get('/saved-emails', (req, res) => {
+  db.all(
+    `SELECT DISTINCT recipientEmail as email FROM emails ORDER BY recipientEmail`,
+    [],
+    (err, rows) => {
+      if (err) return res.status(500).json({ error: 'Veritabanı hatası' });
+      res.json(rows);
+    }
+  );
+});
+
 // Mailbox'ın tüm email'lerini listele
 router.get('/emails/:mailboxId', (req, res) => {
   const { mailboxId } = req.params;

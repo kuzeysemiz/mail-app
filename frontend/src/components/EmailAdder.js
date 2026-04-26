@@ -1,14 +1,20 @@
 ﻿import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
-import { mailboxAPI, emailAPI, draftAPI } from '../services/api';
+import { mailboxAPI, emailAPI, draftAPI, savedEmailsAPI } from '../services/api';
 import './EmailAdder.css';
 
 export default function EmailAdder() {
   const quillRef = useRef(null);
+  const textareaRef = useRef(null);
+  const mirrorRef = useRef(null);
   const [mailboxes, setMailboxes] = useState([]);
   const [selectedMailbox, setSelectedMailbox] = useState('');
   const [recipients, setRecipients] = useState('');
+  const [savedEmails, setSavedEmails] = useState([]);
+  const [suggestion, setSuggestion] = useState({ text: '', lineIndex: -1 });
+  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+  const [mouseOnTextarea, setMouseOnTextarea] = useState(false);
   const [mailSubject, setMailSubject] = useState('');
   const [mailContent, setMailContent] = useState('');
   const [mailSignature, setMailSignature] = useState('');
@@ -269,6 +275,71 @@ export default function EmailAdder() {
     }
   };
 
+  useEffect(() => {
+    savedEmailsAPI.getAll()
+      .then(r => setSavedEmails(r.data.map(e => e.email)))
+      .catch(() => {});
+  }, []);
+
+  const computeSuggestion = useCallback((value, cursorPos) => {
+    const textBefore = value.substring(0, cursorPos);
+    const lines = textBefore.split('\n');
+    const lineIndex = lines.length - 1;
+    const currentLine = lines[lineIndex];
+
+    if (!currentLine.trim()) {
+      setSuggestion({ text: '', lineIndex: -1 });
+      return;
+    }
+
+    const match = savedEmails
+      .filter(e =>
+        e.toLowerCase().startsWith(currentLine.toLowerCase()) &&
+        e.toLowerCase() !== currentLine.toLowerCase()
+      )
+      .sort()[0];
+
+    setSuggestion(match
+      ? { text: match.slice(currentLine.length), lineIndex }
+      : { text: '', lineIndex: -1 }
+    );
+  }, [savedEmails]);
+
+  const handleRecipientsChange = (e) => {
+    setRecipients(e.target.value);
+    computeSuggestion(e.target.value, e.target.selectionStart);
+  };
+
+  const handleRecipientsKeyDown = (e) => {
+    if (e.key === 'Tab' && suggestion.text) {
+      e.preventDefault();
+      const lines = recipients.split('\n');
+      lines[suggestion.lineIndex] += suggestion.text;
+      const newValue = lines.join('\n');
+      setRecipients(newValue);
+      setSuggestion({ text: '', lineIndex: -1 });
+    }
+  };
+
+  const handleRecipientsScroll = (e) => {
+    if (mirrorRef.current) {
+      mirrorRef.current.scrollTop = e.target.scrollTop;
+    }
+  };
+
+  const renderMirror = () => {
+    if (!suggestion.text) return null;
+    return recipients.split('\n').map((line, i) => (
+      <span key={i}>
+        {i > 0 && '\n'}
+        <span style={{ color: 'transparent' }}>{line || '​'}</span>
+        {i === suggestion.lineIndex && (
+          <span className="ghost-suggestion">{suggestion.text}</span>
+        )}
+      </span>
+    ));
+  };
+
   const handleSaveDraft = async () => {
     if (!draftName.trim()) {
       showMessage('Lütfen taslak adı girin', 'error');
@@ -404,14 +475,35 @@ export default function EmailAdder() {
 
         <div className="form-group">
           <label>Mail Adresleri (Her satırda bir):</label>
-          <textarea
-            value={recipients}
-            onChange={(e) => setRecipients(e.target.value)}
-            placeholder="example1@gmail.com
+          <div className="recipient-wrapper">
+            {suggestion.text && (
+              <div className="recipient-mirror" ref={mirrorRef} aria-hidden="true">
+                {renderMirror()}
+              </div>
+            )}
+            <textarea
+              ref={textareaRef}
+              className={suggestion.text ? 'recipient-textarea has-suggestion' : 'recipient-textarea'}
+              value={recipients}
+              onChange={handleRecipientsChange}
+              onKeyDown={handleRecipientsKeyDown}
+              onScroll={handleRecipientsScroll}
+              onMouseMove={(e) => { setMousePos({ x: e.clientX, y: e.clientY }); setMouseOnTextarea(true); }}
+              onMouseLeave={() => setMouseOnTextarea(false)}
+              placeholder="example1@gmail.com
 example2@gmail.com
-ex ample3@gmail.com"
-            rows="6"
-          />
+example3@gmail.com"
+              rows="6"
+            />
+            {suggestion.text && mouseOnTextarea && (
+              <div
+                className="autocomplete-tooltip"
+                style={{ left: mousePos.x + 14, top: mousePos.y + 14 }}
+              >
+                ⇥ Tab ile tamamla
+              </div>
+            )}
+          </div>
           <small>{recipients.split('\n').filter(e => e.trim()).length} / 100</small>
         </div>
 
