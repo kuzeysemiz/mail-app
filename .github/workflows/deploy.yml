@@ -6,26 +6,67 @@ on:
       - main
 
 jobs:
-  deploy:
+  build-and-deploy:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
 
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push API image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          push: true
+          tags: ghcr.io/kuzeysemiz/mail-app-api:latest
+
+      - name: Build and push Web image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./frontend
+          build-args: REACT_APP_API_URL=/api
+          push: true
+          tags: ghcr.io/kuzeysemiz/mail-app-web:latest
+
       - name: Deploy to server
         uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
+          envs: GHCR_TOKEN
           script: |
-            cd ~/mail-app
-            rm -rf .git
-            git init
-            git remote add origin https://github.com/kuzeysemiz/mail-app.git
-            git fetch origin main
-            git reset --hard FETCH_HEAD
-            docker compose down
-            docker compose build --no-cache
-            docker compose up -d
-            sleep 8
-            docker compose ps
+            echo "$GHCR_TOKEN" | docker login ghcr.io -u kuzeysemiz --password-stdin
+            docker pull ghcr.io/kuzeysemiz/mail-app-api:latest
+            docker pull ghcr.io/kuzeysemiz/mail-app-web:latest
+            docker stop mail_api mail_web 2>/dev/null || true
+            docker rm mail_api mail_web 2>/dev/null || true
+            docker network create mail_network 2>/dev/null || true
+            mkdir -p ~/mail-data ~/mail-logs
+            docker run -d --name mail_api --restart always \
+              --network mail_network \
+              -p 10001:10001 \
+              -v ~/mail-data:/app/data \
+              -v ~/mail-logs:/app/logs \
+              -e NODE_ENV=production \
+              -e PORT=10001 \
+              -e GMAIL_EMAIL="${{ secrets.GMAIL_EMAIL }}" \
+              -e GMAIL_PASSWORD="${{ secrets.GMAIL_PASSWORD }}" \
+              ghcr.io/kuzeysemiz/mail-app-api:latest
+            docker run -d --name mail_web --restart always \
+              --network mail_network \
+              -p 10000:10000 \
+              ghcr.io/kuzeysemiz/mail-app-web:latest
             echo "✅ Deploy tamamlandı!"
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
