@@ -415,10 +415,7 @@ export default function EmailAdder() {
     }
     setAiLoading(true);
     try {
-      const response = await aiAPI.enhance(
-        mailContent, 'advanced',
-        `Bu e-postayı ${lang} diline çevir. Profesyonel tonu, yapıyı ve paragraf düzenini koru.`
-      );
+      const response = await aiAPI.enhance(mailContent, 'translate', lang);
       setMailContent(response.data.enhanced);
       showMessage(`Mail ${lang} diline çevrildi!`, 'success');
     } catch (error) {
