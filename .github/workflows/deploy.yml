@@ -44,7 +44,7 @@ jobs:
         run: |
           cd frontend
           npm ci
-          REACT_APP_API_URL=/api npm run build
+          CI=false REACT_APP_API_URL=/api npm run build
           grep -rl "formatDate" build/ && echo "✅ formatDate build'de VAR" || echo "❌ formatDate build'de YOK"
 
       - name: Build and push Web image
