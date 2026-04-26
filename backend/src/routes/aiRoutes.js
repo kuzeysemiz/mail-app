@@ -103,7 +103,7 @@ router.post('/enhance', async (req, res) => {
     logger.info(`AI geliştirme tamamlandı (${wordCount} kelime, ${images.length} resim, mod: ${mode})`);
   } catch (error) {
     logger.error('AI geliştirme hatası:', error);
-    res.status(500).json({ error: 'AI servisi şu an kullanılamıyor' });
+    res.status(500).json({ error: `AI hatası: ${error.message || error}` });
   }
 });
 
