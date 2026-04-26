@@ -176,11 +176,13 @@
   border: 1px solid var(--primary);
   border-left: none;
   border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
-  padding: 7px 7px;
+  padding: 0 9px;
   cursor: pointer;
-  font-size: 14px;
+  font-size: 18px;
   line-height: 1;
-  height: 100%;
+  align-self: stretch;
+  display: flex;
+  align-items: center;
 }
 
 .lang-btn-delete:hover {
