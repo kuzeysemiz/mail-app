@@ -40,13 +40,18 @@ jobs:
           push: true
           tags: ghcr.io/kuzeysemiz/mail-app-api:latest
 
+      - name: Build React app
+        run: |
+          cd frontend
+          npm ci
+          REACT_APP_API_URL=/api npm run build
+          grep -rl "formatDate" build/ && echo "✅ formatDate build'de VAR" || echo "❌ formatDate build'de YOK"
+
       - name: Build and push Web image
         uses: docker/build-push-action@v5
         with:
           context: ./frontend
-          build-args: |
-            REACT_APP_API_URL=/api
-            CACHE_BUST=${{ github.sha }}
+          file: ./frontend/Dockerfile.ci
           push: true
           tags: ghcr.io/kuzeysemiz/mail-app-web:latest
 
