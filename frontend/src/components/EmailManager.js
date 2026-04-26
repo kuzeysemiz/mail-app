@@ -17,6 +17,8 @@ export default function EmailManager() {
   const [editData, setEditData] = useState({});
   const [editingBatchId, setEditingBatchId] = useState(null);
   const [editBatchData, setEditBatchData] = useState({});
+  const [renamingBatchId, setRenamingBatchId] = useState(null);
+  const [renameValue, setRenameValue] = useState('');
   const [message, setMessage] = useState('');
   const [sendOverdue, setSendOverdue] = useState(false);
 
@@ -141,6 +143,66 @@ export default function EmailManager() {
       loadBatches(selectedMailbox);
     } catch (error) {
       showMessage('Güncelleme hatası: ' + (error.response?.data?.error || 'Bilinmeyen hata'), 'error');
+    }
+  };
+
+  const handleRenameBatch = async (batchId) => {
+    if (!renameValue.trim()) return;
+    try {
+      await emailAPI.updateBatch(batchId, renameValue.trim(), null, null);
+      setRenamingBatchId(null);
+      loadBatches(selectedMailbox);
+    } catch {
+      showMessage('Yeniden adlandırma başarısız', 'error');
+    }
+  };
+
+  const handleDownloadPDF = async (batch) => {
+    try {
+      const response = await emailAPI.getBatchEmails(batch.batchId);
+      const items = response.data;
+      const statusLabel = { sent: 'Gönderildi', pending: 'Bekleniyor', failed: 'Başarısız' };
+      const html = `<!DOCTYPE html><html><head><meta charset="utf-8">
+        <title>${batch.mailSubject || 'Mail Listesi'}</title>
+        <style>
+          body { font-family: Arial, sans-serif; padding: 30px; color: #111; }
+          h2 { margin-bottom: 4px; }
+          .meta { color: #555; font-size: 13px; margin-bottom: 20px; }
+          .stats { display: flex; gap: 20px; margin-bottom: 20px; font-size: 13px; }
+          .stat { padding: 6px 14px; border-radius: 4px; font-weight: 600; }
+          .s-total { background: #f3f4f6; }
+          .s-sent  { background: #dcfce7; color: #166534; }
+          .s-pend  { background: #fef9c3; color: #854d0e; }
+          .s-fail  { background: #fee2e2; color: #991b1b; }
+          table { width: 100%; border-collapse: collapse; font-size: 13px; }
+          th { background: #f3f4f6; text-align: left; padding: 9px 10px; border-bottom: 2px solid #e5e7eb; }
+          td { padding: 8px 10px; border-bottom: 1px solid #e5e7eb; }
+          tr:nth-child(even) td { background: #f9fafb; }
+          @media print { body { padding: 15px; } }
+        </style>
+      </head><body>
+        <h2>${batch.mailSubject || 'Mail Listesi'}</h2>
+        <div class="meta">Oluşturulma: ${new Date(batch.createdAt).toLocaleDateString('tr-TR')} &nbsp;|&nbsp; Liste ID: ${batch.batchId.substring(0,12)}</div>
+        <div class="stats">
+          <span class="stat s-total">Toplam: ${batch.totalCount}</span>
+          <span class="stat s-sent">Gönderildi: ${batch.sentCount || 0}</span>
+          <span class="stat s-pend">Bekleniyor: ${batch.pendingCount || 0}</span>
+          <span class="stat s-fail">Başarısız: ${batch.failedCount || 0}</span>
+        </div>
+        <table>
+          <thead><tr><th>#</th><th>Email Adresi</th><th>Tarih</th><th>Saat</th><th>Durum</th></tr></thead>
+          <tbody>${items.map((e, i) => `
+            <tr><td>${i + 1}</td><td>${e.recipientEmail}</td><td>${e.scheduledDate || '-'}</td><td>${e.scheduledTime || '-'}</td><td>${statusLabel[e.status] || e.status}</td></tr>
+          `).join('')}</tbody>
+        </table>
+      </body></html>`;
+
+      const win = window.open('', '_blank');
+      win.document.write(html);
+      win.document.close();
+      setTimeout(() => win.print(), 300);
+    } catch {
+      showMessage('PDF oluşturulurken hata oluştu', 'error');
     }
   };
 
@@ -395,7 +457,31 @@ export default function EmailManager() {
                     <div className="header">
                       <div className="batch-info">
                         <strong>Liste #{batch.batchId.substring(0, 8)}</strong>
-                        <span className="batch-subject">{batch.mailSubject || 'Başlıksız'}</span>
+                        {renamingBatchId === batch.batchId ? (
+                          <div className="rename-row">
+                            <input
+                              className="rename-input"
+                              value={renameValue}
+                              onChange={(e) => setRenameValue(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') handleRenameBatch(batch.batchId);
+                                if (e.key === 'Escape') setRenamingBatchId(null);
+                              }}
+                              autoFocus
+                            />
+                            <button className="btn btn-primary rename-save-btn" onClick={() => handleRenameBatch(batch.batchId)}>Kaydet</button>
+                            <button className="btn btn-secondary rename-save-btn" onClick={() => setRenamingBatchId(null)}>İptal</button>
+                          </div>
+                        ) : (
+                          <div className="batch-subject-row">
+                            <span className="batch-subject">{batch.mailSubject || 'Başlıksız'}</span>
+                            <button
+                              className="rename-icon-btn"
+                              title="Yeniden adlandır"
+                              onClick={() => { setRenamingBatchId(batch.batchId); setRenameValue(batch.mailSubject || ''); }}
+                            >✏️</button>
+                          </div>
+                        )}
                       </div>
                     </div>
 
@@ -440,7 +526,13 @@ export default function EmailManager() {
                       >
                         ✏️ Düzenle
                       </button>
-                      <button 
+                      <button
+                        className="btn btn-secondary"
+                        onClick={() => handleDownloadPDF(batch)}
+                      >
+                        📄 PDF
+                      </button>
+                      <button
                         className="btn btn-danger"
                         onClick={() => handleDeleteBatch(batch.batchId)}
                       >
