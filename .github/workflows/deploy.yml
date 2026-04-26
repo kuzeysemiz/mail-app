@@ -55,6 +55,7 @@ jobs:
             mkdir -p ~/mail-data ~/mail-logs
             docker run -d --name mail_api --restart always \
               --network mail_network \
+              --network-alias api \
               -p 10001:10001 \
               -v ~/mail-data:/app/data \
               -v ~/mail-logs:/app/logs \
