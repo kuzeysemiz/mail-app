@@ -20,6 +20,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Verify source files
+        run: |
+          echo "Commit: ${{ github.sha }}"
+          grep -c "formatDate" frontend/src/components/EmailManager.js && echo "✅ formatDate VAR" || echo "❌ formatDate YOK"
+          grep -c "sendOverdue" frontend/src/components/EmailManager.js && echo "✅ sendOverdue VAR" || echo "❌ sendOverdue YOK"
+
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v3
         with:
