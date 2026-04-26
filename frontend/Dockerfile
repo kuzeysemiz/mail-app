@@ -10,7 +10,8 @@ ARG REACT_APP_API_URL=http://localhost:10001/api
 COPY package*.json ./
 RUN npm ci
 
-# Kaynak kodunu kopy et
+# Cache bust - her commit'te kaynak kodu yeniden kopyala
+ARG CACHE_BUST
 COPY . .
 
 # Production build yap

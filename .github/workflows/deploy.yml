@@ -38,7 +38,9 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: ./frontend
-          build-args: REACT_APP_API_URL=/api
+          build-args: |
+            REACT_APP_API_URL=/api
+            CACHE_BUST=${{ github.sha }}
           push: true
           tags: ghcr.io/kuzeysemiz/mail-app-web:latest
 
