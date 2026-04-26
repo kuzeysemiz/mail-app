@@ -152,6 +152,150 @@
   box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.12);
 }
 
+.ai-btn-rules {
+  background: var(--card);
+  color: var(--text);
+  border-color: var(--border);
+  gap: 6px;
+}
+
+.ai-btn-rules:hover:not(:disabled) {
+  background: var(--muted-light);
+}
+
+.rules-badge {
+  background: #6366f1;
+  color: #fff;
+  border-radius: 99px;
+  padding: 1px 6px;
+  font-size: 11px;
+}
+
+.ai-rules-wrapper {
+  position: relative;
+}
+
+.rules-panel {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  width: 320px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  z-index: 100;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.rules-panel-header {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.rules-add-row {
+  display: flex;
+  gap: 6px;
+}
+
+.rules-input {
+  flex: 1;
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  color: var(--text);
+  background: var(--card);
+  font-family: inherit;
+}
+
+.rules-input:focus {
+  outline: none;
+  border-color: #6366f1;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+.rules-add-btn {
+  padding: 6px 12px;
+  background: #6366f1;
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.rules-add-btn:hover {
+  background: #4f46e5;
+}
+
+.rules-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+.rules-empty {
+  font-size: 13px;
+  color: var(--muted);
+  text-align: center;
+  padding: 8px 0;
+}
+
+.rule-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 7px 8px;
+  border-radius: var(--radius-sm);
+  background: var(--muted-light);
+  border: 1px solid transparent;
+}
+
+.rule-item input[type="checkbox"] {
+  margin-top: 2px;
+  cursor: pointer;
+  flex-shrink: 0;
+  accent-color: #6366f1;
+}
+
+.rule-text {
+  flex: 1;
+  font-size: 13px;
+  color: var(--text);
+  line-height: 1.4;
+}
+
+.rule-inactive .rule-text {
+  color: var(--muted);
+  text-decoration: line-through;
+}
+
+.rule-delete-btn {
+  background: none;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+  padding: 0 2px;
+  flex-shrink: 0;
+}
+
+.rule-delete-btn:hover {
+  color: var(--danger-text);
+}
+
 /* ─── RECIPIENT AUTOCOMPLETE ─────────────────────────────── */
 .recipient-wrapper {
   position: relative;

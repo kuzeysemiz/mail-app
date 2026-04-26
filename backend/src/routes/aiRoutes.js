@@ -1,7 +1,23 @@
 const express = require('express');
 const router = express.Router();
 const Groq = require('groq-sdk');
+const db = require('../models/database');
 const logger = require('../middleware/logger');
+
+function getAiRules() {
+  return new Promise((resolve) => {
+    db.get(`SELECT value FROM settings WHERE key = 'ai_rules'`, (err, row) => {
+      if (err || !row) return resolve('');
+      try {
+        const rules = JSON.parse(row.value);
+        const activeRules = rules.filter(r => r.active).map(r => `- ${r.text}`);
+        resolve(activeRules.join('\n'));
+      } catch {
+        resolve('');
+      }
+    });
+  });
+}
 
 function extractText(html) {
   return html
@@ -33,8 +49,11 @@ router.post('/enhance', async (req, res) => {
     return res.status(500).json({ error: 'AI servisi yapılandırılmamış (GROQ_API_KEY eksik)' });
   }
 
+  const aiRules = await getAiRules();
+  const rulesSection = aiRules ? `\n\nBiçimlendirme kuralları (her zaman uygula):\n${aiRules}` : '';
+
   const systemPrompt = mode === 'advanced' && userPrompt
-    ? `Sen bir profesyonel e-posta yazarısın. Kullanıcının talimatlarına göre e-posta içeriğini geliştir. Sadece geliştirilmiş içeriği HTML formatında döndür (<p>, <strong>, <em>, <ul>, <li>, <br> taglarını kullanabilirsin). Ekstra açıklama veya yorum ekleme, sadece e-posta metnini döndür.`
+    ? `Sen bir profesyonel e-posta yazarısın. Kullanıcının talimatlarına göre e-posta içeriğini geliştir. Sadece geliştirilmiş içeriği HTML formatında döndür (<p>, <strong>, <em>, <ul>, <li>, <br> taglarını kullanabilirsin). Ekstra açıklama veya yorum ekleme, sadece e-posta metnini döndür.${rulesSection}`
     : `Sen bir profesyonel e-posta yazarısın. Verilen e-posta içeriğini şu kurallara göre geliştir:
 - Kurumsal ve profesyonel bir ton kullan, büyük bir şirketten yazılmış gibi hissettir
 - Kişisel bir dokunuş ekle, robot gibi değil gerçek bir insan gibi hissettir
@@ -42,7 +61,7 @@ router.post('/enhance', async (req, res) => {
 - Alıcıya özel yazılmış gibi, genel bir şablon gibi değil
 - İçerik hangi dildeyse o dilde yaz
 - Sadece geliştirilmiş e-posta metnini HTML formatında döndür (<p>, <strong>, <em>, <ul>, <li>, <br> taglarını kullanabilirsin)
-- Ekstra açıklama, yorum veya başlık ekleme — sadece e-posta gövdesini döndür`;
+- Ekstra açıklama, yorum veya başlık ekleme — sadece e-posta gövdesini döndür${rulesSection}`;
 
   const userMessage = mode === 'advanced' && userPrompt
     ? `Talimatlar: ${userPrompt}\n\nGeliştirilecek e-posta:\n${text}`

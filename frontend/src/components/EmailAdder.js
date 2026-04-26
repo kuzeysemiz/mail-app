@@ -1,7 +1,7 @@
 ﻿import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
-import { mailboxAPI, emailAPI, draftAPI, savedEmailsAPI, aiAPI } from '../services/api';
+import { mailboxAPI, emailAPI, draftAPI, savedEmailsAPI, aiAPI, settingsAPI } from '../services/api';
 import './EmailAdder.css';
 
 export default function EmailAdder() {
@@ -32,6 +32,10 @@ export default function EmailAdder() {
   const [aiLoading, setAiLoading] = useState(false);
   const [showAdvancedAI, setShowAdvancedAI] = useState(false);
   const [advancedPrompt, setAdvancedPrompt] = useState('');
+  const [showRulesPanel, setShowRulesPanel] = useState(false);
+  const [aiRules, setAiRules] = useState([]);
+  const [newRuleText, setNewRuleText] = useState('');
+  const rulesPanelRef = useRef(null);
 
   const showMessage = (msg, type = 'success') => {
     setMessage(msg);
@@ -343,6 +347,46 @@ export default function EmailAdder() {
     ));
   };
 
+  useEffect(() => {
+    settingsAPI.get('ai_rules')
+      .then(r => {
+        try { setAiRules(JSON.parse(r.data.value)); } catch { setAiRules([]); }
+      })
+      .catch(() => setAiRules([]));
+  }, []);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (rulesPanelRef.current && !rulesPanelRef.current.contains(e.target)) {
+        setShowRulesPanel(false);
+      }
+    };
+    if (showRulesPanel) document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showRulesPanel]);
+
+  const saveRules = async (updatedRules) => {
+    setAiRules(updatedRules);
+    try {
+      await settingsAPI.set('ai_rules', JSON.stringify(updatedRules));
+    } catch { /* sessiz hata */ }
+  };
+
+  const handleAddRule = () => {
+    if (!newRuleText.trim()) return;
+    const newRule = { id: Date.now(), text: newRuleText.trim(), active: true };
+    saveRules([...aiRules, newRule]);
+    setNewRuleText('');
+  };
+
+  const handleToggleRule = (id) => {
+    saveRules(aiRules.map(r => r.id === id ? { ...r, active: !r.active } : r));
+  };
+
+  const handleDeleteRule = (id) => {
+    saveRules(aiRules.filter(r => r.id !== id));
+  };
+
   const getPlainTextFromHtml = (html) => {
     return html
       .replace(/<img[^>]*>/gi, '')
@@ -602,6 +646,51 @@ example3@gmail.com"
           >
             ⚙ Gelişmiş AI
           </button>
+          <div className="ai-rules-wrapper" ref={rulesPanelRef}>
+            <button
+              type="button"
+              className="ai-btn ai-btn-rules"
+              onClick={() => setShowRulesPanel(v => !v)}
+            >
+              📋 Kurallar {aiRules.length > 0 && <span className="rules-badge">{aiRules.filter(r => r.active).length}/{aiRules.length}</span>}
+            </button>
+            {showRulesPanel && (
+              <div className="rules-panel">
+                <div className="rules-panel-header">AI Yazım Kuralları</div>
+                <div className="rules-add-row">
+                  <input
+                    type="text"
+                    className="rules-input"
+                    value={newRuleText}
+                    onChange={(e) => setNewRuleText(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleAddRule()}
+                    placeholder="Yeni kural ekle..."
+                  />
+                  <button type="button" className="rules-add-btn" onClick={handleAddRule}>Ekle</button>
+                </div>
+                <div className="rules-list">
+                  {aiRules.length === 0 && (
+                    <div className="rules-empty">Henüz kural yok</div>
+                  )}
+                  {aiRules.map(rule => (
+                    <div key={rule.id} className={`rule-item${rule.active ? '' : ' rule-inactive'}`}>
+                      <input
+                        type="checkbox"
+                        checked={rule.active}
+                        onChange={() => handleToggleRule(rule.id)}
+                      />
+                      <span className="rule-text">{rule.text}</span>
+                      <button
+                        type="button"
+                        className="rule-delete-btn"
+                        onClick={() => handleDeleteRule(rule.id)}
+                      >×</button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
 
         {showAdvancedAI && (

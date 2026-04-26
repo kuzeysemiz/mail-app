@@ -65,6 +65,8 @@ db.serialize(() => {
     )
   `);
   db.run(`INSERT OR IGNORE INTO settings (key, value) VALUES ('send_overdue', 'false')`);
+  db.run(`INSERT OR IGNORE INTO settings (key, value) VALUES ('ai_rules', '[{"id":1,"text":"Paragraflar arasına mutlaka boş satır bırak, her paragraf ayrı p tagı içinde olsun","active":true},{"id":2,"text":"Uzun cümleleri böl, kısa ve anlaşılır cümleler kullan","active":true},{"id":3,"text":"Önemli noktalarda vurgulama yap","active":true},{"id":4,"text":"Metnin başına gereksiz giriş cümlesi ekleme, direkt içeriğe gir","active":true}]')`);
+
 
   // Taslak maillar tablosu
   db.run(`
