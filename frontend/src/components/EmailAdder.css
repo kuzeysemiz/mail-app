@@ -512,6 +512,23 @@
   margin: 0;
 }
 
+.business-hours-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text);
+  cursor: pointer;
+  margin-top: 10px;
+}
+
+.business-hours-checkbox input[type="checkbox"] {
+  width: 15px;
+  height: 15px;
+  cursor: pointer;
+  accent-color: var(--primary);
+}
+
 .manual-schedule-toggle {
   display: flex;
   align-items: center;

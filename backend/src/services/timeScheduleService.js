@@ -1,9 +1,11 @@
 const logger = require('../middleware/logger');
 
 class TimeScheduleService {
-  // Rastgele saatler oluştur (09:00 - 18:00 arası)
-  generateRandomTime() {
-    const hour = Math.floor(Math.random() * (18 - 9)) + 9; // 9-17 arası (max 17:59)
+  // Rastgele saatler oluştur
+  generateRandomTime(businessHours = true) {
+    const hourMin = businessHours ? 9 : 0;
+    const hourMax = businessHours ? 18 : 24;
+    const hour = Math.floor(Math.random() * (hourMax - hourMin)) + hourMin;
     const minute = Math.floor(Math.random() * 60);
 
     return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
@@ -17,8 +19,8 @@ class TimeScheduleService {
     return `${y}-${m}-${d}`;
   }
 
-  // Sonraki 5 iş gününü al (Pazartesi-Cuma)
-  getWeekdaysFromToday() {
+  // Sonraki 5 günü al (businessHours=true → Pzt-Cum, false → tüm günler)
+  getWeekdaysFromToday(businessHours = true) {
     const days = [];
     const today = new Date();
     let i = 0;
@@ -27,7 +29,7 @@ class TimeScheduleService {
       const date = new Date(today);
       date.setDate(today.getDate() + i);
       const dayOfWeek = date.getDay();
-      if (dayOfWeek >= 1 && dayOfWeek <= 5) {
+      if (!businessHours || (dayOfWeek >= 1 && dayOfWeek <= 5)) {
         days.push(date);
       }
       i++;
@@ -36,8 +38,8 @@ class TimeScheduleService {
     return days;
   }
 
-  // Ayın belirtilen haftasındaki iş günlerini al (1=1-7, 2=8-14, 3=15-21, 4=22-28)
-  getWeekdaysInMonthWeek(weekNumber) {
+  // Ayın belirtilen haftasındaki günleri al (businessHours=true → Pzt-Cum, false → tüm günler)
+  getWeekdaysInMonthWeek(weekNumber, businessHours = true) {
     const now = new Date();
     const startDay = (weekNumber - 1) * 7 + 1;
     const endDay = weekNumber * 7;
@@ -48,7 +50,7 @@ class TimeScheduleService {
         const date = new Date(year, month, d);
         if (date.getMonth() !== month) break;
         const dow = date.getDay();
-        if (dow >= 1 && dow <= 5) days.push(date);
+        if (!businessHours || (dow >= 1 && dow <= 5)) days.push(date);
       }
       return days;
     };
@@ -69,10 +71,10 @@ class TimeScheduleService {
   }
 
   // Ayın haftasına göre dağıt
-  distributeEmailsByWeek(emailCount, weekNumber) {
-    const weekdays = this.getWeekdaysInMonthWeek(weekNumber);
+  distributeEmailsByWeek(emailCount, weekNumber, businessHours = true) {
+    const weekdays = this.getWeekdaysInMonthWeek(weekNumber, businessHours);
     if (weekdays.length === 0) {
-      throw new Error(`Ayın ${weekNumber}. haftasında uygun iş günü bulunamadı`);
+      throw new Error(`Ayın ${weekNumber}. haftasında uygun gün bulunamadı`);
     }
 
     const maxPerDay = 30;
@@ -87,7 +89,7 @@ class TimeScheduleService {
       if (available.length === 0) break;
 
       const { day, index } = available[Math.floor(Math.random() * available.length)];
-      scheduledEmails.push({ date: this.formatLocalDate(day), time: this.generateRandomTime() });
+      scheduledEmails.push({ date: this.formatLocalDate(day), time: this.generateRandomTime(businessHours) });
       emailsPerDay[index]++;
     }
 
@@ -96,20 +98,18 @@ class TimeScheduleService {
   }
 
   // Mailları rastgele zamanlara dağıt
-  distributeEmailsRandomly(emailCount, mailboxId) {
-    const weekdays = this.getWeekdaysFromToday();
+  distributeEmailsRandomly(emailCount, mailboxId, businessHours = true) {
+    const weekdays = this.getWeekdaysFromToday(businessHours);
     const maxPerDay = 30;
-    
+
     if (weekdays.length === 0) {
-      throw new Error('Hafta içi gün yok. Lütfen perşembe veya daha erken bir gün tekrar deneyin.');
+      throw new Error('Uygun gün bulunamadı. Lütfen tekrar deneyin.');
     }
 
-    // Her gün için zamanlanan mailları takip et
     const emailsPerDay = Array(weekdays.length).fill(0);
     const scheduledEmails = [];
 
     for (let i = 0; i < emailCount; i++) {
-      // Limiti dolmamış tüm günleri bul ve rastgele birini seç
       const availableDays = weekdays
         .map((day, index) => ({ day, index }))
         .filter(({ index }) => emailsPerDay[index] < maxPerDay);
@@ -120,8 +120,8 @@ class TimeScheduleService {
       }
 
       const { day, index: dayIndex } = availableDays[Math.floor(Math.random() * availableDays.length)];
-      const time = this.generateRandomTime();
-      
+      const time = this.generateRandomTime(businessHours);
+
       scheduledEmails.push({
         date: this.formatLocalDate(day),
         time: time,

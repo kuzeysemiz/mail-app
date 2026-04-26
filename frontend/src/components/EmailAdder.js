@@ -30,6 +30,7 @@ export default function EmailAdder() {
   const [manualDate, setManualDate] = useState(() => new Date().toISOString().split('T')[0]);
   const [manualTime, setManualTime] = useState('09:00');
   const [selectedWeek, setSelectedWeek] = useState('1');
+  const [businessHours, setBusinessHours] = useState(true);
   const [aiLoading, setAiLoading] = useState(false);
   const [showAdvancedAI, setShowAdvancedAI] = useState(false);
   const [advancedPrompt, setAdvancedPrompt] = useState('');
@@ -576,7 +577,8 @@ export default function EmailAdder() {
         selectedMailbox, emailList, mailSubject, mailContent, mailSignature,
         scheduleMode === 'manual' ? manualDate : null,
         scheduleMode === 'manual' ? manualTime : null,
-        scheduleMode === 'week' ? selectedWeek : null
+        scheduleMode === 'week' ? selectedWeek : null,
+        businessHours
       );
       showMessage(`${response.data.addedCount} email başarıyla eklendi!`, 'success');
       setPreviewSchedule(response.data.scheduledTimes || []);
@@ -825,6 +827,15 @@ example3@gmail.com"
               onClick={() => setScheduleMode('manual')}
             >Manuel</button>
           </div>
+
+          <label className="business-hours-checkbox">
+            <input
+              type="checkbox"
+              checked={businessHours}
+              onChange={(e) => setBusinessHours(e.target.checked)}
+            />
+            Mesai saatleri (Pzt–Cum, 09:00–17:59)
+          </label>
 
           {scheduleMode === 'week' && (
             <div className="manual-schedule-inputs">

@@ -7,7 +7,8 @@ const logger = require('../middleware/logger');
 
 // Mailbox'a yeni email'ler ekle (toplu)
 router.post('/emails/add', (req, res) => {
-  const { mailboxId, recipients, mailSubject, mailContent, mailSignature, manualDate, manualTime, weekNumber } = req.body;
+  const { mailboxId, recipients, mailSubject, mailContent, mailSignature, manualDate, manualTime, weekNumber, businessHours } = req.body;
+  const useBusinessHours = businessHours !== false; // default true
 
   if (!mailboxId || !recipients || recipients.length === 0 || !mailContent) {
     return res.status(400).json({ error: 'mailboxId, recipients (dizi) ve mailContent gereklidir' });
@@ -26,13 +27,13 @@ router.post('/emails/add', (req, res) => {
     scheduledTimes = recipients.map(() => ({ date: manualDate, time: manualTime }));
   } else if (weekNumber) {
     try {
-      scheduledTimes = timeScheduleService.distributeEmailsByWeek(recipients.length, parseInt(weekNumber));
+      scheduledTimes = timeScheduleService.distributeEmailsByWeek(recipients.length, parseInt(weekNumber), useBusinessHours);
     } catch (error) {
       return res.status(400).json({ error: error.message });
     }
   } else {
     try {
-      scheduledTimes = timeScheduleService.distributeEmailsRandomly(recipients.length, mailboxId);
+      scheduledTimes = timeScheduleService.distributeEmailsRandomly(recipients.length, mailboxId, useBusinessHours);
     } catch (error) {
       return res.status(400).json({ error: error.message });
     }
