@@ -472,6 +472,44 @@
   background: var(--primary-light);
   border: 1px solid #c2e8e1;
   border-radius: var(--radius-lg);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.schedule-mode-tabs {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.schedule-tab {
+  padding: 6px 14px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--muted);
+  transition: background var(--t), color var(--t), border-color var(--t);
+}
+
+.schedule-tab.active {
+  background: var(--primary);
+  color: #fff;
+  border-color: var(--primary);
+}
+
+.schedule-tab:hover:not(.active) {
+  background: var(--muted-light);
+  color: var(--text);
+}
+
+.schedule-hint {
+  font-size: 12px;
+  color: var(--muted);
+  margin: 0;
 }
 
 .manual-schedule-toggle {

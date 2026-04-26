@@ -21,8 +21,8 @@ export const mailboxAPI = {
 
 // Email API'leri
 export const emailAPI = {
-  add: (mailboxId, recipients, mailSubject, mailContent, mailSignature, manualDate, manualTime) =>
-    api.post('/emails/emails/add', { mailboxId, recipients, mailSubject, mailContent, mailSignature, manualDate, manualTime }),
+  add: (mailboxId, recipients, mailSubject, mailContent, mailSignature, manualDate, manualTime, weekNumber) =>
+    api.post('/emails/emails/add', { mailboxId, recipients, mailSubject, mailContent, mailSignature, manualDate, manualTime, weekNumber }),
   getByMailbox: (mailboxId, status) => {
     const params = status ? `?status=${status}` : '';
     return api.get(`/emails/emails/${mailboxId}${params}`);

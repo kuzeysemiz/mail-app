@@ -26,9 +26,10 @@ export default function EmailAdder() {
   const [showDraftName, setShowDraftName] = useState(false);
   const [draftName, setDraftName] = useState('');
   const [editingDraftId, setEditingDraftId] = useState(null);
-  const [manualSchedule, setManualSchedule] = useState(false);
+  const [scheduleMode, setScheduleMode] = useState('auto'); // 'auto' | 'manual' | 'week'
   const [manualDate, setManualDate] = useState(() => new Date().toISOString().split('T')[0]);
   const [manualTime, setManualTime] = useState('09:00');
+  const [selectedWeek, setSelectedWeek] = useState('1');
   const [aiLoading, setAiLoading] = useState(false);
   const [showAdvancedAI, setShowAdvancedAI] = useState(false);
   const [advancedPrompt, setAdvancedPrompt] = useState('');
@@ -563,7 +564,7 @@ export default function EmailAdder() {
       return;
     }
 
-    if (manualSchedule && (!manualDate || !manualTime)) {
+    if (scheduleMode === 'manual' && (!manualDate || !manualTime)) {
       showMessage('Manuel zamanlama için tarih ve saat seçin', 'error');
       return;
     }
@@ -573,8 +574,9 @@ export default function EmailAdder() {
     try {
       const response = await emailAPI.add(
         selectedMailbox, emailList, mailSubject, mailContent, mailSignature,
-        manualSchedule ? manualDate : null,
-        manualSchedule ? manualTime : null
+        scheduleMode === 'manual' ? manualDate : null,
+        scheduleMode === 'manual' ? manualTime : null,
+        scheduleMode === 'week' ? selectedWeek : null
       );
       showMessage(`${response.data.addedCount} email başarıyla eklendi!`, 'success');
       setPreviewSchedule(response.data.scheduledTimes || []);
@@ -806,17 +808,40 @@ example3@gmail.com"
         </div>
 
         <div className="manual-schedule-group">
-          <label className="manual-schedule-toggle">
-            <input
-              type="checkbox"
-              checked={manualSchedule}
-              onChange={(e) => setManualSchedule(e.target.checked)}
-            />
-            <span className="toggle-slider"></span>
-            <span className="toggle-label">Manuel Zamanlama</span>
-          </label>
+          <div className="schedule-mode-tabs">
+            <button
+              type="button"
+              className={`schedule-tab${scheduleMode === 'auto' ? ' active' : ''}`}
+              onClick={() => setScheduleMode('auto')}
+            >Otomatik</button>
+            <button
+              type="button"
+              className={`schedule-tab${scheduleMode === 'week' ? ' active' : ''}`}
+              onClick={() => setScheduleMode('week')}
+            >Ayın Haftası</button>
+            <button
+              type="button"
+              className={`schedule-tab${scheduleMode === 'manual' ? ' active' : ''}`}
+              onClick={() => setScheduleMode('manual')}
+            >Manuel</button>
+          </div>
 
-          {manualSchedule && (
+          {scheduleMode === 'week' && (
+            <div className="manual-schedule-inputs">
+              <div className="manual-field">
+                <label>Hafta:</label>
+                <select value={selectedWeek} onChange={(e) => setSelectedWeek(e.target.value)}>
+                  <option value="1">1. Hafta (1–7)</option>
+                  <option value="2">2. Hafta (8–14)</option>
+                  <option value="3">3. Hafta (15–21)</option>
+                  <option value="4">4. Hafta (22–28)</option>
+                </select>
+              </div>
+              <p className="schedule-hint">Seçilen haftanın iş günlerine mesai saatlerinde rastgele dağıtılır.</p>
+            </div>
+          )}
+
+          {scheduleMode === 'manual' && (
             <div className="manual-schedule-inputs">
               <div className="manual-field">
                 <label>Tarih:</label>
