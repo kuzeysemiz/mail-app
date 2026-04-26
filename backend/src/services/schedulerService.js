@@ -10,21 +10,36 @@ class SchedulerService {
   }
 
   loadScheduledEmails() {
-    db.all(
-      `SELECT e.id, e.mailboxId, e.recipientEmail, e.mailSubject, e.mailContent, e.mailSignature,
-              e.scheduledTime, e.scheduledDate, m.email, m.appPassword
-       FROM emails e
-       JOIN mailboxes m ON e.mailboxId = m.id
-       WHERE e.status = 'pending' AND e.scheduledDate >= date('now')`,
-      (err, rows) => {
-        if (err) {
-          logger.error('Zamanlanan maillar yüklenirken hata:', err);
-          return;
+    db.get(`SELECT value FROM settings WHERE key = 'send_overdue'`, (err, setting) => {
+      const sendOverdue = !err && setting && setting.value === 'true';
+
+      db.all(
+        `SELECT e.id, e.mailboxId, e.recipientEmail, e.mailSubject, e.mailContent, e.mailSignature,
+                e.scheduledTime, e.scheduledDate, m.email, m.appPassword
+         FROM emails e
+         JOIN mailboxes m ON e.mailboxId = m.id
+         WHERE e.status = 'pending' AND e.scheduledDate >= date('now')`,
+        (err, rows) => {
+          if (err) {
+            logger.error('Zamanlanan maillar yüklenirken hata:', err);
+            return;
+          }
+
+          const now = new Date();
+          rows.forEach(row => {
+            const scheduledAt = new Date(`${row.scheduledDate}T${row.scheduledTime}:00`);
+            if (sendOverdue && scheduledAt <= now) {
+              logger.info(`Zamanı geçmiş email hemen gönderiliyor: ${row.id}`);
+              this.sendScheduledEmail(row);
+            } else {
+              this.scheduleEmail(row);
+            }
+          });
+
+          logger.info(`${rows.length} adet email yüklendi (geçmiş gönderim: ${sendOverdue})`);
         }
-        rows.forEach(row => this.scheduleEmail(row));
-        logger.info(`${rows.length} adet email başarıyla schedule edildi`);
-      }
-    );
+      );
+    });
   }
 
   scheduleEmail(emailData) {

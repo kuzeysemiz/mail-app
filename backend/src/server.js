@@ -10,6 +10,7 @@ const mailboxRoutes = require('./routes/mailboxRoutes');
 const emailRoutes = require('./routes/emailRoutes');
 const logRoutes = require('./routes/logRoutes');
 const draftRoutes = require('./routes/draftRoutes');
+const settingsRoutes = require('./routes/settingsRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 10001;
@@ -24,6 +25,7 @@ app.use('/api/mailboxes', mailboxRoutes);
 app.use('/api/emails', emailRoutes);
 app.use('/api/logs', logRoutes);
 app.use('/api/drafts', draftRoutes);
+app.use('/api/settings', settingsRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

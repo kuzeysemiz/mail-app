@@ -35,6 +35,8 @@ export const emailAPI = {
     api.delete(`/emails/batch/${batchId}`),
   sendNow: (id) =>
     api.post(`/emails/email/${id}/send-now`),
+  sendBatchNow: (batchId) =>
+    api.post(`/emails/batch/${batchId}/send-now`),
   // Batch işlemleri
   getBatches: (mailboxId) =>
     api.get(`/emails/batches/${mailboxId}`),
@@ -72,6 +74,12 @@ export const draftAPI = {
     api.put(`/drafts/${draftId}`, { draftName, mailSubject, mailContent, mailSignature }),
   delete: (draftId) =>
     api.delete(`/drafts/${draftId}`)
+};
+
+// Settings API'leri
+export const settingsAPI = {
+  get: (key) => api.get(`/settings/${key}`),
+  set: (key, value) => api.post('/settings', { key, value })
 };
 
 // Health check

@@ -212,6 +212,36 @@ router.post('/email/:id/send-now', async (req, res) => {
   }
 });
 
+// Batch'in tüm pending email'lerini hemen gönder
+router.post('/batch/:batchId/send-now', async (req, res) => {
+  const { batchId } = req.params;
+
+  db.all(
+    `SELECT id FROM emails WHERE batchId = ? AND status = 'pending'`,
+    [batchId],
+    async (err, rows) => {
+      if (err) return res.status(500).json({ error: 'Veritabanı hatası' });
+      if (rows.length === 0) return res.json({ message: 'Gönderilecek email yok', sentCount: 0 });
+
+      let sentCount = 0;
+      let failCount = 0;
+
+      for (const row of rows) {
+        try {
+          await schedulerService.sendEmailNow(row.id);
+          sentCount++;
+        } catch (e) {
+          failCount++;
+          logger.error(`Batch send-now hatası (${row.id}):`, e);
+        }
+      }
+
+      res.json({ message: `${sentCount} email gönderildi`, sentCount, failCount });
+      logger.info(`Batch hemen gönderildi: ${batchId}`, { sentCount, failCount });
+    }
+  );
+});
+
 // Batch'in tüm email'lerini sil
 router.delete('/batch/:batchId', (req, res) => {
   const { batchId } = req.params;

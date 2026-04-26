@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
-import { mailboxAPI, emailAPI } from '../services/api';
+import { mailboxAPI, emailAPI, settingsAPI } from '../services/api';
 import './EmailManager.css';
 
 export default function EmailManager() {
@@ -18,6 +18,7 @@ export default function EmailManager() {
   const [editingBatchId, setEditingBatchId] = useState(null);
   const [editBatchData, setEditBatchData] = useState({});
   const [message, setMessage] = useState('');
+  const [sendOverdue, setSendOverdue] = useState(false);
 
   const modules = {
     toolbar: [
@@ -40,7 +41,18 @@ export default function EmailManager() {
 
   useEffect(() => {
     loadMailboxes();
+    settingsAPI.get('send_overdue').then(r => setSendOverdue(r.data.value === 'true')).catch(() => {});
   }, []);
+
+  const handleSendOverdueChange = async (e) => {
+    const value = e.target.checked;
+    setSendOverdue(value);
+    try {
+      await settingsAPI.set('send_overdue', String(value));
+    } catch {
+      showMessage('Ayar kaydedilemedi', 'error');
+    }
+  };
 
   const loadMailboxes = async () => {
     try {
@@ -129,6 +141,17 @@ export default function EmailManager() {
       loadBatches(selectedMailbox);
     } catch (error) {
       showMessage('Güncelleme hatası: ' + (error.response?.data?.error || 'Bilinmeyen hata'), 'error');
+    }
+  };
+
+  const handleSendBatchNow = async (batchId, pendingCount) => {
+    if (!window.confirm(`Bu listedeki ${pendingCount} email hemen gönderilsin mi?`)) return;
+    try {
+      const response = await emailAPI.sendBatchNow(batchId);
+      showMessage(response.data.message);
+      loadBatches(selectedMailbox);
+    } catch (error) {
+      showMessage('Gönderme hatası: ' + (error.response?.data?.error || 'Bilinmeyen hata'), 'error');
     }
   };
 
@@ -271,6 +294,16 @@ export default function EmailManager() {
         )}
 
         {viewMode === 'emails' && (
+          <label className="overdue-toggle">
+            <input
+              type="checkbox"
+              checked={sendOverdue}
+              onChange={handleSendOverdueChange}
+            />
+            Zamanı geçmiş mailleri gönder
+          </label>
+        )}
+        {viewMode === 'emails' && (
           <span className="email-count">
             {emails.length} email
           </span>
@@ -393,7 +426,15 @@ export default function EmailManager() {
                       >
                         👁️ Detaylar
                       </button>
-                      <button 
+                      {batch.pendingCount > 0 && (
+                        <button
+                          className="btn btn-success"
+                          onClick={() => handleSendBatchNow(batch.batchId, batch.pendingCount)}
+                        >
+                          ⚡ Hemen Gönder
+                        </button>
+                      )}
+                      <button
                         className="btn btn-edit"
                         onClick={() => handleEditBatch(batch)}
                       >

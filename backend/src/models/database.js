@@ -57,6 +57,15 @@ db.serialize(() => {
     )
   `);
 
+  // Ayarlar tablosu
+  db.run(`
+    CREATE TABLE IF NOT EXISTS settings (
+      key TEXT PRIMARY KEY,
+      value TEXT NOT NULL
+    )
+  `);
+  db.run(`INSERT OR IGNORE INTO settings (key, value) VALUES ('send_overdue', 'false')`);
+
   // Taslak maillar tablosu
   db.run(`
     CREATE TABLE IF NOT EXISTS drafts (
