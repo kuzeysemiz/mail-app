@@ -39,30 +39,30 @@ jobs:
           tags: ghcr.io/kuzeysemiz/mail-app-web:latest
 
       - name: Deploy to server
-        uses: appleboy/ssh-action@master
+        uses: appleboy/ssh-action@90162d1e4396c5c4b7671d60cae550a8b1ae1d0b
         with:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
-          envs: GHCR_TOKEN
+          envs: GHCR_TOKEN,GMAIL_EMAIL,GMAIL_PASSWORD
           script: |
             echo "$GHCR_TOKEN" | docker login ghcr.io -u kuzeysemiz --password-stdin
             docker pull ghcr.io/kuzeysemiz/mail-app-api:latest
             docker pull ghcr.io/kuzeysemiz/mail-app-web:latest
+            docker logout ghcr.io
             docker stop mail_api mail_web 2>/dev/null || true
             docker rm mail_api mail_web 2>/dev/null || true
             docker network create mail_network 2>/dev/null || true
             mkdir -p ~/mail-data ~/mail-logs
+            printf "NODE_ENV=production\nPORT=10001\nGMAIL_EMAIL=%s\nGMAIL_PASSWORD=%s\n" "$GMAIL_EMAIL" "$GMAIL_PASSWORD" > ~/mail.env
+            chmod 600 ~/mail.env
             docker run -d --name mail_api --restart always \
               --network mail_network \
               --network-alias api \
               -p 10001:10001 \
               -v ~/mail-data:/app/data \
               -v ~/mail-logs:/app/logs \
-              -e NODE_ENV=production \
-              -e PORT=10001 \
-              -e GMAIL_EMAIL="${{ secrets.GMAIL_EMAIL }}" \
-              -e GMAIL_PASSWORD="${{ secrets.GMAIL_PASSWORD }}" \
+              --env-file ~/mail.env \
               ghcr.io/kuzeysemiz/mail-app-api:latest
             docker run -d --name mail_web --restart always \
               --network mail_network \
@@ -77,3 +77,5 @@ jobs:
             echo "✅ Deploy tamamlandı!"
         env:
           GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GMAIL_EMAIL: ${{ secrets.GMAIL_EMAIL }}
+          GMAIL_PASSWORD: ${{ secrets.GMAIL_PASSWORD }}
