@@ -20,7 +20,8 @@ jobs:
             cd ~/mail-app
             git pull origin main
             docker compose down
-            docker compose up -d --build
+            docker compose build --no-cache
+            docker compose up -d
             sleep 8
             docker compose ps
             echo "✅ Deploy tamamlandı!"
