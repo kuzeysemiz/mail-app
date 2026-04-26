@@ -199,6 +199,14 @@ export default function EmailManager() {
     setTimeout(() => setMessage(''), 3000);
   };
 
+  const formatDate = (dateStr) => {
+    if (!dateStr) return '';
+    const months = ['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
+    const days = ['Pazar','Pazartesi','Salı','Çarşamba','Perşembe','Cuma','Cumartesi'];
+    const date = new Date(dateStr + 'T12:00:00');
+    return `${date.getDate()} ${months[date.getMonth()]} ${days[date.getDay()]}`;
+  };
+
   const getStatusBadge = (status) => {
     const colors = {
       pending: 'pending',
@@ -515,7 +523,7 @@ export default function EmailManager() {
                         {getStatusBadge(email.status)}
                       </div>
                       <div className="schedule">
-                        <span className="date">{email.scheduledDate}</span>
+                        <span className="date">{formatDate(email.scheduledDate)}</span>
                         <span className="time">{email.scheduledTime}</span>
                       </div>
                     </div>
