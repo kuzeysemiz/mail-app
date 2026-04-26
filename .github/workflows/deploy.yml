@@ -17,6 +17,7 @@ jobs:
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
           script: |
+            git config --global --add safe.directory ~/mail-app
             cd ~/mail-app
             git pull origin main
             docker compose down
