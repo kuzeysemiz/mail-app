@@ -50,22 +50,31 @@ router.post('/enhance', async (req, res) => {
   }
 
   const aiRules = await getAiRules();
-  const rulesSection = aiRules ? `\n\nBiçimlendirme kuralları (her zaman uygula):\n${aiRules}` : '';
+  const rulesBlock = aiRules
+    ? `\n\n=== ZORUNLU KURALLAR (İSTİSNASIZ UYGULANACAK) ===\n${aiRules}\n=== KURALLAR SONU ===`
+    : '';
 
-  const systemPrompt = mode === 'advanced' && userPrompt
-    ? `Sen bir profesyonel e-posta yazarısın. Kullanıcının talimatlarına göre e-posta içeriğini geliştir. Sadece geliştirilmiş içeriği HTML formatında döndür (<p>, <strong>, <em>, <ul>, <li>, <br> taglarını kullanabilirsin). Ekstra açıklama veya yorum ekleme, sadece e-posta metnini döndür.${rulesSection}`
-    : `Sen bir profesyonel e-posta yazarısın. Verilen e-posta içeriğini şu kurallara göre geliştir:
-- Kurumsal ve profesyonel bir ton kullan, büyük bir şirketten yazılmış gibi hissettir
-- Kişisel bir dokunuş ekle, robot gibi değil gerçek bir insan gibi hissettir
-- Özgün mesaj ve amacı koru, içeriği değiştirme sadece ifadeyi güçlendir
-- Alıcıya özel yazılmış gibi, genel bir şablon gibi değil
-- İçerik hangi dildeyse o dilde yaz
-- Sadece geliştirilmiş e-posta metnini HTML formatında döndür (<p>, <strong>, <em>, <ul>, <li>, <br> taglarını kullanabilirsin)
-- Ekstra açıklama, yorum veya başlık ekleme — sadece e-posta gövdesini döndür${rulesSection}`;
+  const formatInstructions = `
 
-  const userMessage = mode === 'advanced' && userPrompt
-    ? `Talimatlar: ${userPrompt}\n\nGeliştirilecek e-posta:\n${text}`
-    : `Bu e-posta içeriğini geliştir:\n${text}`;
+=== ÇIKIŞ FORMATI (KESİNLİKLE UYULMALI) ===
+- Her paragraf ayrı bir <p>...</p> tagı içinde olmalı
+- Paragraflar arasına boş satır koyma, sadece <p> tagları yeterli
+- <strong> ile önemli kelimeleri vurgula
+- Gereken yerde <ul><li> madde listesi kullan
+- SADECE HTML içeriği döndür — açıklama, başlık, yorum, ön söz YASAK
+- Yanıtın ilk karakteri < olmalı, son karakteri > olmalı
+=== FORMAT SONU ===`;
+
+  const baseInstructions = mode === 'advanced' && userPrompt
+    ? `Sen bir profesyonel e-posta yazarısın.\n\nKullanıcı talimatları:\n${userPrompt}${rulesBlock}${formatInstructions}`
+    : `Sen bir profesyonel e-posta yazarısın. Aşağıdaki kurallara KESINLIKLE uy:
+
+- Kurumsal ve profesyonel ton kullan, büyük bir şirketten yazılmış izlenimi ver
+- Gerçek bir insan gibi yaz, kalıp ifadelerden kaçın
+- Özgün mesajı koru, sadece ifadeyi güçlendir
+- Her kural listede ne diyorsa tam olarak uygula${rulesBlock}${formatInstructions}`;
+
+  const userMessage = `Aşağıdaki e-postayı geliştir:\n\n${text}`;
 
   try {
     const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
@@ -74,7 +83,7 @@ router.post('/enhance', async (req, res) => {
       model: 'llama-3.3-70b-versatile',
       max_tokens: 4096,
       messages: [
-        { role: 'system', content: systemPrompt },
+        { role: 'system', content: baseInstructions },
         { role: 'user', content: userMessage }
       ]
     });
