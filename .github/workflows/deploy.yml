@@ -17,10 +17,12 @@ jobs:
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
           script: |
-            git config --global --add safe.directory ~/mail-app
-            sudo chown -R $(whoami):$(whoami) ~/mail-app/.git
             cd ~/mail-app
-            git pull origin main
+            rm -rf .git
+            git init
+            git remote add origin https://github.com/kuzeysemiz/mail-app.git
+            git fetch origin main
+            git reset --hard FETCH_HEAD
             docker compose down
             docker compose build --no-cache
             docker compose up -d
