@@ -65,7 +65,7 @@ export default function MailboxManager() {
 
   return (
     <div className="mailbox-manager">
-      <h2>Gmail Hesabı Yönetimi</h2>
+      <h2>Hesap Yönetimi</h2>
       <p className="page-desc">Gmail SMTP üzerinden mail göndermek için hesap ekleyin.</p>
 
       <div className="card">
