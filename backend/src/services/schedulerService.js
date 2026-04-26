@@ -18,7 +18,7 @@ class SchedulerService {
                 e.scheduledTime, e.scheduledDate, m.email, m.appPassword
          FROM emails e
          JOIN mailboxes m ON e.mailboxId = m.id
-         WHERE e.status = 'pending' AND e.scheduledDate >= date('now')`,
+         WHERE e.status = 'pending' AND e.scheduledDate >= date('now', 'localtime')`,
         (err, rows) => {
           if (err) {
             logger.error('Zamanlanan maillar yüklenirken hata:', err);

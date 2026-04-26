@@ -9,6 +9,14 @@ class TimeScheduleService {
     return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
   }
 
+  // Yerel tarihi YYYY-MM-DD formatında döndür (toISOString UTC döndürdüğü için kullanma)
+  formatLocalDate(date) {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  }
+
   // Sonraki 5 iş gününü al (Pazartesi-Cuma)
   getWeekdaysFromToday() {
     const days = [];
@@ -56,7 +64,7 @@ class TimeScheduleService {
       const time = this.generateRandomTime();
       
       scheduledEmails.push({
-        date: day.toISOString().split('T')[0],
+        date: this.formatLocalDate(day),
         time: time,
         dayIndex: dayIndex
       });
