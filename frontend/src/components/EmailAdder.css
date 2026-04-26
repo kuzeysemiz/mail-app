@@ -382,6 +382,14 @@
   padding: 12px;
 }
 
+.email-adder .ql-editor p {
+  margin-bottom: 10px;
+}
+
+.email-adder .ql-editor p:last-child {
+  margin-bottom: 0;
+}
+
 .email-adder .ql-toolbar button { color: var(--muted); position: relative; z-index: 4; }
 .email-adder .ql-toolbar button:hover,
 .email-adder .ql-toolbar button.ql-active { color: var(--primary); }
