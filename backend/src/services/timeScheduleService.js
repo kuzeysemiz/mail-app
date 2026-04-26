@@ -3,8 +3,8 @@ const logger = require('../middleware/logger');
 class TimeScheduleService {
   // Rastgele saatler oluştur (09:00 - 18:00 arası)
   generateRandomTime() {
-    const hour = Math.floor(Math.random() * (18 - 9 + 1)) + 9; // 9-18 arası
-    const minute = Math.floor(Math.random() * 60); // 0-59 arası
+    const hour = Math.floor(Math.random() * (18 - 9)) + 9; // 9-17 arası (max 17:59)
+    const minute = Math.floor(Math.random() * 60);
 
     return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
   }
@@ -43,21 +43,17 @@ class TimeScheduleService {
     const scheduledEmails = [];
 
     for (let i = 0; i < emailCount; i++) {
-      // Henüz 30 maili almayan bir gün bul
-      let dayIndex = -1;
-      for (let j = 0; j < weekdays.length; j++) {
-        if (emailsPerDay[j] < maxPerDay) {
-          dayIndex = j;
-          break;
-        }
-      }
+      // Limiti dolmamış tüm günleri bul ve rastgele birini seç
+      const availableDays = weekdays
+        .map((day, index) => ({ day, index }))
+        .filter(({ index }) => emailsPerDay[index] < maxPerDay);
 
-      if (dayIndex === -1) {
+      if (availableDays.length === 0) {
         logger.warn(`${emailCount} mail için yeterli zaman yok. ${i} mail schedule edildi.`);
         break;
       }
 
-      const day = weekdays[dayIndex];
+      const { day, index: dayIndex } = availableDays[Math.floor(Math.random() * availableDays.length)];
       const time = this.generateRandomTime();
       
       scheduledEmails.push({
