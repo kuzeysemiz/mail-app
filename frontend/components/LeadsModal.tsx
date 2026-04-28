@@ -70,7 +70,7 @@ export default function LeadsModal({ onClose, onSelect }: Props) {
   const [selectedTitle, setSelectedTitle]     = useState<string>("");
   const [companySearch, setCompanySearch]     = useState("");
   const [leadSearch, setLeadSearch]           = useState("");
-  const [selected, setSelected]               = useState<Set<number>>(new Set());
+  const [allSelected, setAllSelected]         = useState<Map<number, Lead>>(new Map());
   const [loading, setLoading]                 = useState(false);
   const [tagging, setTagging]                 = useState(false);
   const [tagMsg, setTagMsg]                   = useState<{ text: string; type: "success" | "error" } | null>(null);
@@ -99,7 +99,6 @@ export default function LeadsModal({ onClose, onSelect }: Props) {
     if (!selectedCompany) return;
     leadsAPI.getTitles(selectedCompany).then(r => setTitles(r.data)).catch(() => {});
     setSelectedTitle("");
-    setSelected(new Set());
     loadLeads(selectedCompany, "");
   }, [selectedCompany]);
 
@@ -180,24 +179,47 @@ export default function LeadsModal({ onClose, onSelect }: Props) {
     setImporting(false);
   };
 
-  const toggleLead = (id: number) => {
-    setSelected(prev => {
-      const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
+  const toggleLead = (lead: Lead) => {
+    setAllSelected(prev => {
+      const next = new Map(prev);
+      next.has(lead.id) ? next.delete(lead.id) : next.set(lead.id, lead);
       return next;
     });
   };
 
   const toggleAll = () => {
-    if (selected.size === leads.length) setSelected(new Set());
-    else setSelected(new Set(leads.map(l => l.id)));
+    const allCurrentSelected = leads.every(l => allSelected.has(l.id));
+    setAllSelected(prev => {
+      const next = new Map(prev);
+      if (allCurrentSelected) {
+        leads.forEach(l => next.delete(l.id));
+      } else {
+        leads.forEach(l => next.set(l.id, l));
+      }
+      return next;
+    });
+  };
+
+  const removeCompanySelection = (company: string) => {
+    setAllSelected(prev => {
+      const next = new Map(prev);
+      prev.forEach((lead, id) => { if (lead.company === company) next.delete(id); });
+      return next;
+    });
   };
 
   const handleSelect = () => {
-    const emails = leads.filter(l => selected.has(l.id)).map(l => l.email);
-    onSelect(emails);
+    onSelect(Array.from(allSelected.values()).map(l => l.email));
     onClose();
   };
+
+  // Seçili şirketleri grupla
+  const selectedByCompany = Array.from(allSelected.values()).reduce((acc, lead) => {
+    const key = lead.company || "—";
+    if (!acc[key]) acc[key] = [];
+    acc[key].push(lead);
+    return acc;
+  }, {} as Record<string, Lead[]>);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "rgba(0,0,0,0.6)" }}>
@@ -391,10 +413,11 @@ export default function LeadsModal({ onClose, onSelect }: Props) {
 
                 {/* Table header */}
                 <div className="px-5 py-3 border-b border-border flex items-center gap-3 bg-secondary/50">
-                  <input type="checkbox" checked={leads.length > 0 && selected.size === leads.length}
+                  <input type="checkbox"
+                    checked={leads.length > 0 && leads.every(l => allSelected.has(l.id))}
                     onChange={toggleAll} className="accent-primary w-3.5 h-3.5" />
                   <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
-                    {selected.size > 0 ? `${selected.size} seçili` : `${leads.length} kişi`}
+                    {leads.length} kişi
                   </span>
                 </div>
 
@@ -409,8 +432,8 @@ export default function LeadsModal({ onClose, onSelect }: Props) {
                   ) : (
                     leads.map(lead => (
                       <label key={lead.id}
-                        className={`flex items-center gap-3 px-5 py-4 border-b border-border/40 last:border-0 cursor-pointer transition-colors hover:bg-secondary ${selected.has(lead.id) ? "bg-primary/5" : ""}`}>
-                        <input type="checkbox" checked={selected.has(lead.id)} onChange={() => toggleLead(lead.id)}
+                        className={`flex items-center gap-3 px-5 py-4 border-b border-border/40 last:border-0 cursor-pointer transition-colors hover:bg-secondary ${allSelected.has(lead.id) ? "bg-primary/5" : ""}`}>
+                        <input type="checkbox" checked={allSelected.has(lead.id)} onChange={() => toggleLead(lead)}
                           className="accent-primary w-3.5 h-3.5 shrink-0" />
                         <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0 text-primary text-[11px] font-bold">
                           {(lead.firstName?.[0] || lead.email[0]).toUpperCase()}
@@ -435,16 +458,39 @@ export default function LeadsModal({ onClose, onSelect }: Props) {
           </div>
         </div>
 
+        {/* Seçilen şirketler özet paneli */}
+        {allSelected.size > 0 && (
+          <div className="border-t border-border px-6 py-4 bg-secondary/40">
+            <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-3">
+              Seçilenler — {allSelected.size} kişi
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {Object.entries(selectedByCompany).map(([company, compLeads]) => (
+                <div key={company} className="flex items-center gap-1.5 pl-3 pr-1.5 py-1.5 bg-card border border-border rounded-lg text-xs">
+                  <span className="font-medium text-foreground">{company}</span>
+                  <span className="text-muted-foreground">({compLeads.length})</span>
+                  <button
+                    onClick={() => removeCompanySelection(company)}
+                    className="ml-1 w-4 h-4 flex items-center justify-center rounded-full text-muted-foreground hover:bg-destructive/20 hover:text-destructive transition-colors"
+                  >
+                    <X size={10} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Footer */}
         <div className="flex items-center justify-between px-6 py-5 border-t border-border">
           <span className="text-sm text-muted-foreground">
-            {selected.size > 0 ? `${selected.size} kişi seçildi` : "Kişi seçilmedi"}
+            {allSelected.size > 0 ? `${allSelected.size} kişi seçildi` : "Kişi seçilmedi"}
           </span>
           <div className="flex gap-3">
             <button onClick={onClose} className="px-5 py-3 bg-secondary border border-border text-foreground rounded-lg text-sm font-medium hover:bg-muted transition-colors">
               İptal
             </button>
-            <button onClick={handleSelect} disabled={selected.size === 0}
+            <button onClick={handleSelect} disabled={allSelected.size === 0}
               className="flex items-center gap-2 px-6 py-3 bg-primary text-[oklch(0.11_0.005_260)] rounded-lg text-sm font-semibold hover:opacity-90 disabled:opacity-40 transition-opacity">
               <Check size={15} />Seçilenleri Ekle
             </button>
