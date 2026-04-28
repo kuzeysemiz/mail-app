@@ -2,21 +2,145 @@ const express = require('express');
 const router = express.Router();
 const db = require('../models/database');
 const https = require('https');
+const Groq = require('groq-sdk');
 
-// Tüm şirketleri listele
+// Tüm şirketleri listele (tag filtreli, her şirkete tag'leri ekli)
 router.get('/companies', (req, res) => {
-  const { q } = req.query;
-  let query = `SELECT company, domain, COUNT(*) as count FROM leads WHERE company IS NOT NULL`;
+  const { q, tag } = req.query;
+
+  // Önce tag filtreli şirket + count sorgula
+  let companyQuery = `
+    SELECT l.company, l.domain, COUNT(*) as count
+    FROM leads l
+    WHERE l.company IS NOT NULL
+  `;
   const params = [];
+
+  if (tag) {
+    companyQuery += ` AND l.company IN (SELECT company FROM company_tags WHERE tag = ?)`;
+    params.push(tag);
+  }
   if (q) {
-    query += ` AND (company LIKE ? OR domain LIKE ?)`;
+    companyQuery += ` AND (l.company LIKE ? OR l.domain LIKE ?)`;
     params.push(`%${q}%`, `%${q}%`);
   }
-  query += ` GROUP BY company ORDER BY company ASC`;
-  db.all(query, params, (err, rows) => {
+  companyQuery += ` GROUP BY l.company ORDER BY l.company ASC`;
+
+  db.all(companyQuery, params, (err, companies) => {
     if (err) return res.status(500).json({ error: 'Veritabanı hatası' });
-    res.json(rows);
+    if (companies.length === 0) return res.json([]);
+
+    // Her şirketin tag'lerini çek
+    const companyNames = companies.map(c => `'${c.company.replace(/'/g, "''")}'`).join(',');
+    db.all(
+      `SELECT company, tag FROM company_tags WHERE company IN (${companyNames}) ORDER BY tag ASC`,
+      [],
+      (err2, tagRows) => {
+        const tagMap = {};
+        if (!err2) tagRows.forEach(r => {
+          if (!tagMap[r.company]) tagMap[r.company] = [];
+          tagMap[r.company].push(r.tag);
+        });
+        const result = companies.map(c => ({ ...c, tags: tagMap[c.company] || [] }));
+        res.json(result);
+      }
+    );
   });
+});
+
+// Tüm distinct tag'leri getir
+router.get('/tags', (req, res) => {
+  db.all(
+    `SELECT tag, COUNT(*) as count FROM company_tags GROUP BY tag ORDER BY count DESC`,
+    (err, rows) => {
+      if (err) return res.status(500).json({ error: 'Veritabanı hatası' });
+      res.json(rows);
+    }
+  );
+});
+
+// AI ile şirketleri otomatik etiketle
+router.post('/auto-tag', async (req, res) => {
+  if (!process.env.GROQ_API_KEY) {
+    return res.status(500).json({ error: 'GROQ_API_KEY eksik' });
+  }
+
+  // Tüm unique şirket isimlerini al
+  db.all(
+    `SELECT DISTINCT company FROM leads WHERE company IS NOT NULL ORDER BY company ASC`,
+    async (err, rows) => {
+      if (err) return res.status(500).json({ error: 'Veritabanı hatası' });
+      if (rows.length === 0) return res.json({ tagged: 0 });
+
+      const companies = rows.map(r => r.company);
+
+      // 50'şer gruplara böl (prompt sınırı için)
+      const BATCH = 50;
+      const batches = [];
+      for (let i = 0; i < companies.length; i += BATCH) {
+        batches.push(companies.slice(i, i + BATCH));
+      }
+
+      const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+      const allResults = {};
+
+      for (const batch of batches) {
+        const list = batch.map((c, i) => `${i + 1}. ${c}`).join('\n');
+        try {
+          const completion = await groq.chat.completions.create({
+            model: 'llama-3.3-70b-versatile',
+            max_tokens: 2048,
+            temperature: 0.1,
+            messages: [
+              {
+                role: 'system',
+                content: `Sen bir iş sektörü sınıflandırma uzmanısın. Verilen şirket isimlerinin her birine maksimum 2 sektör etiketi ata.
+Etiketler Türkçe, kısa (1-2 kelime) ve genel sektör isimleri olmalı.
+Örnekler: Teknoloji, Lojistik, E-ticaret, Finans, Sağlık, Perakende, Üretim, Medya, Eğitim, Gayrimenkul, Enerji, Tarım, Turizm, Hukuk, Danışmanlık, Sigorta, Gıda, Otomotiv, Tekstil, İnşaat
+
+SADECE geçerli JSON döndür, başka hiçbir şey yazma. Format:
+{"Şirket İsmi": ["Tag1", "Tag2"], "Diğer Şirket": ["Tag1"]}`
+              },
+              {
+                role: 'user',
+                content: `Bu şirketleri sınıflandır:\n${list}`
+              }
+            ]
+          });
+
+          const raw = completion.choices[0].message.content.trim();
+          // JSON bloğunu çıkar
+          const jsonMatch = raw.match(/\{[\s\S]*\}/);
+          if (jsonMatch) {
+            const parsed = JSON.parse(jsonMatch[0]);
+            Object.assign(allResults, parsed);
+          }
+        } catch (e) {
+          // Batch başarısız olursa devam et
+        }
+      }
+
+      // company_tags tablosuna kaydet
+      let tagged = 0;
+      await new Promise((resolve) => {
+        db.serialize(() => {
+          const stmt = db.prepare(`INSERT OR IGNORE INTO company_tags (company, tag) VALUES (?, ?)`);
+          for (const [company, tags] of Object.entries(allResults)) {
+            const validTags = (Array.isArray(tags) ? tags : []).slice(0, 2);
+            validTags.forEach(tag => {
+              if (typeof tag === 'string' && tag.trim()) {
+                stmt.run(company, tag.trim());
+                tagged++;
+              }
+            });
+          }
+          stmt.finalize(resolve);
+        });
+      });
+
+      res.json({ success: true, tagged, companies: companies.length });
+    }
+  );
 });
 
 // Şirkete göre title listesi

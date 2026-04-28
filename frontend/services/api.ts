@@ -97,11 +97,13 @@ export const settingsAPI = {
 };
 
 export const leadsAPI = {
-  getCompanies: (q?: string) => api.get("/leads/companies", { params: q ? { q } : {} }),
+  getCompanies: (params?: { q?: string; tag?: string }) => api.get("/leads/companies", { params }),
   getTitles: (company: string) => api.get("/leads/titles", { params: { company } }),
   getLeads: (params: { company?: string; title?: string; q?: string }) =>
     api.get("/leads", { params }),
   getStats: () => api.get("/leads/stats"),
+  getTags: () => api.get("/leads/tags"),
+  autoTag: () => api.post("/leads/auto-tag"),
   import: () => api.post("/leads/import"),
   getApiKey: () => api.get("/leads/apikey"),
   saveApiKey: (apiKey: string) => api.post("/leads/apikey", { apiKey }),

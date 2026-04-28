@@ -96,6 +96,16 @@ db.serialize(() => {
     )
   `);
 
+  // Şirket etiketleri tablosu
+  db.run(`
+    CREATE TABLE IF NOT EXISTS company_tags (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      company TEXT NOT NULL,
+      tag TEXT NOT NULL,
+      UNIQUE(company, tag)
+    )
+  `);
+
   // Leads (kişi rehberi) tablosu
   db.run(`
     CREATE TABLE IF NOT EXISTS leads (

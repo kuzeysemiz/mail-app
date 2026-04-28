@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
-import { X, Search, Building2, ChevronRight, Users, Download, Check, Loader2, AlertCircle, Trash2, Key } from "lucide-react";
+import { X, Search, Building2, ChevronRight, Users, Download, Check, Loader2, AlertCircle, Trash2, Key, Sparkles } from "lucide-react";
 import { leadsAPI } from "@/services/api";
 
 interface Lead {
@@ -18,6 +18,12 @@ interface Company {
   company: string;
   domain: string;
   count: number;
+  tags: string[];
+}
+
+interface Tag {
+  tag: string;
+  count: number;
 }
 
 interface Props {
@@ -25,35 +31,69 @@ interface Props {
   onSelect: (emails: string[]) => void;
 }
 
+// Tag'e göre deterministik renk
+const TAG_COLORS = [
+  { bg: "bg-blue-500/15",   text: "text-blue-400",   border: "border-blue-500/30"   },
+  { bg: "bg-violet-500/15", text: "text-violet-400", border: "border-violet-500/30" },
+  { bg: "bg-emerald-500/15",text: "text-emerald-400",border: "border-emerald-500/30"},
+  { bg: "bg-amber-500/15",  text: "text-amber-400",  border: "border-amber-500/30"  },
+  { bg: "bg-rose-500/15",   text: "text-rose-400",   border: "border-rose-500/30"   },
+  { bg: "bg-cyan-500/15",   text: "text-cyan-400",   border: "border-cyan-500/30"   },
+  { bg: "bg-pink-500/15",   text: "text-pink-400",   border: "border-pink-500/30"   },
+  { bg: "bg-lime-500/15",   text: "text-lime-400",   border: "border-lime-500/30"   },
+  { bg: "bg-orange-500/15", text: "text-orange-400", border: "border-orange-500/30" },
+  { bg: "bg-teal-500/15",   text: "text-teal-400",   border: "border-teal-500/30"   },
+];
+
+function tagColor(tag: string) {
+  let hash = 0;
+  for (let i = 0; i < tag.length; i++) hash = (hash * 31 + tag.charCodeAt(i)) & 0xffff;
+  return TAG_COLORS[hash % TAG_COLORS.length];
+}
+
+function TagBadge({ tag, small = false }: { tag: string; small?: boolean }) {
+  const c = tagColor(tag);
+  return (
+    <span className={`inline-flex items-center border rounded-full font-medium ${c.bg} ${c.text} ${c.border} ${small ? "text-[10px] px-1.5 py-0.5" : "text-xs px-2.5 py-1"}`}>
+      {tag}
+    </span>
+  );
+}
+
 export default function LeadsModal({ onClose, onSelect }: Props) {
-  const [companies, setCompanies]           = useState<Company[]>([]);
-  const [leads, setLeads]                   = useState<Lead[]>([]);
-  const [titles, setTitles]                 = useState<string[]>([]);
+  const [companies, setCompanies]             = useState<Company[]>([]);
+  const [leads, setLeads]                     = useState<Lead[]>([]);
+  const [titles, setTitles]                   = useState<string[]>([]);
+  const [tags, setTags]                       = useState<Tag[]>([]);
+  const [activeTag, setActiveTag]             = useState<string>("");
   const [selectedCompany, setSelectedCompany] = useState<string | null>(null);
-  const [selectedTitle, setSelectedTitle]   = useState<string>("");
-  const [companySearch, setCompanySearch]   = useState("");
-  const [leadSearch, setLeadSearch]         = useState("");
-  const [selected, setSelected]             = useState<Set<number>>(new Set());
-  const [loading, setLoading]               = useState(false);
-  const [importing, setImporting]           = useState(false);
-  const [importMsg, setImportMsg]           = useState<{ text: string; type: "success" | "error" } | null>(null);
-  const [showImport, setShowImport]         = useState(false);
-  const [apiKeyInput, setApiKeyInput]       = useState("");
-  const [savedKey, setSavedKey]             = useState<{ saved: boolean; masked?: string }>({ saved: false });
-  const [savingKey, setSavingKey]           = useState(false);
-  const [stats, setStats]                   = useState<{ total: number; companies: number } | null>(null);
+  const [selectedTitle, setSelectedTitle]     = useState<string>("");
+  const [companySearch, setCompanySearch]     = useState("");
+  const [leadSearch, setLeadSearch]           = useState("");
+  const [selected, setSelected]               = useState<Set<number>>(new Set());
+  const [loading, setLoading]                 = useState(false);
+  const [tagging, setTagging]                 = useState(false);
+  const [tagMsg, setTagMsg]                   = useState<{ text: string; type: "success" | "error" } | null>(null);
+  const [importing, setImporting]             = useState(false);
+  const [importMsg, setImportMsg]             = useState<{ text: string; type: "success" | "error" } | null>(null);
+  const [showImport, setShowImport]           = useState(false);
+  const [apiKeyInput, setApiKeyInput]         = useState("");
+  const [savedKey, setSavedKey]               = useState<{ saved: boolean; masked?: string }>({ saved: false });
+  const [savingKey, setSavingKey]             = useState(false);
+  const [stats, setStats]                     = useState<{ total: number; companies: number } | null>(null);
   const searchTimer = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     loadCompanies();
     leadsAPI.getStats().then(r => setStats(r.data)).catch(() => {});
     leadsAPI.getApiKey().then(r => setSavedKey(r.data)).catch(() => {});
+    leadsAPI.getTags().then(r => setTags(r.data)).catch(() => {});
   }, []);
 
   useEffect(() => {
     if (searchTimer.current) clearTimeout(searchTimer.current);
-    searchTimer.current = setTimeout(() => loadCompanies(companySearch), 300);
-  }, [companySearch]);
+    searchTimer.current = setTimeout(() => loadCompanies(companySearch, activeTag), 300);
+  }, [companySearch, activeTag]);
 
   useEffect(() => {
     if (!selectedCompany) return;
@@ -69,9 +109,9 @@ export default function LeadsModal({ onClose, onSelect }: Props) {
     searchTimer.current = setTimeout(() => loadLeads(selectedCompany, selectedTitle, leadSearch), 300);
   }, [selectedTitle, leadSearch]);
 
-  const loadCompanies = async (q?: string) => {
+  const loadCompanies = async (q?: string, tag?: string) => {
     try {
-      const r = await leadsAPI.getCompanies(q);
+      const r = await leadsAPI.getCompanies({ q: q || undefined, tag: tag || undefined });
       setCompanies(r.data);
     } catch {}
   };
@@ -83,6 +123,25 @@ export default function LeadsModal({ onClose, onSelect }: Props) {
       setLeads(r.data);
     } catch {}
     setLoading(false);
+  };
+
+  const refreshTags = async () => {
+    const r = await leadsAPI.getTags().catch(() => null);
+    if (r) setTags(r.data);
+  };
+
+  const handleAutoTag = async () => {
+    setTagging(true);
+    setTagMsg(null);
+    try {
+      const r = await leadsAPI.autoTag();
+      setTagMsg({ text: `${r.data.companies} şirkete etiket atandı`, type: "success" });
+      await refreshTags();
+      loadCompanies(companySearch, activeTag);
+    } catch (err: any) {
+      setTagMsg({ text: err.response?.data?.error || "Etiketleme başarısız", type: "error" });
+    }
+    setTagging(false);
   };
 
   const handleSaveKey = async () => {
@@ -113,8 +172,8 @@ export default function LeadsModal({ onClose, onSelect }: Props) {
       const parts = [`${totalImported} yeni kişi içe aktarıldı`];
       if (totalDuplicate > 0) parts.push(`${totalDuplicate} zaten mevcut`);
       setImportMsg({ text: `${totalFetched} lead çekildi — ${parts.join(", ")}`, type: "success" });
-      loadCompanies();
       leadsAPI.getStats().then(r => setStats(r.data)).catch(() => {});
+      loadCompanies(companySearch, activeTag);
     } catch (err: any) {
       setImportMsg({ text: err.response?.data?.error || "İçe aktarma başarısız", type: "error" });
     }
@@ -157,10 +216,18 @@ export default function LeadsModal({ onClose, onSelect }: Props) {
           </div>
           <div className="flex items-center gap-2">
             <button
+              onClick={handleAutoTag}
+              disabled={tagging}
+              className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-violet-600 to-purple-600 text-white rounded-lg text-xs font-semibold hover:opacity-90 disabled:opacity-60 transition-opacity"
+            >
+              {tagging ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={13} />}
+              {tagging ? "Etiketleniyor..." : "AI ile Etiketle"}
+            </button>
+            <button
               onClick={() => setShowImport(v => !v)}
               className="flex items-center gap-2 px-3 py-2 bg-secondary border border-border rounded-lg text-xs font-medium hover:bg-muted transition-colors"
             >
-              <Download size={13} />Hunter.io İçe Aktar
+              <Download size={13} />Hunter.io
             </button>
             <button onClick={onClose} className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors">
               <X size={18} />
@@ -168,17 +235,22 @@ export default function LeadsModal({ onClose, onSelect }: Props) {
           </div>
         </div>
 
+        {/* Tag message */}
+        {tagMsg && (
+          <div className={`px-6 py-3 border-b border-border flex items-center gap-2 text-xs ${tagMsg.type === "success" ? "bg-primary/10 text-primary" : "bg-destructive/10 text-destructive"}`}>
+            {tagMsg.type === "success" ? <Check size={13} /> : <AlertCircle size={13} />}
+            {tagMsg.text}
+          </div>
+        )}
+
         {/* Import panel */}
         {showImport && (
           <div className="px-6 py-4 bg-secondary border-b border-border space-y-3">
             <p className="text-xs text-muted-foreground">
-              Hunter.io hesabınızdaki kayıtlı leadleri veritabanına aktarın. API anahtarınızı{" "}
-              <a href="https://hunter.io/api-keys" target="_blank" rel="noopener noreferrer" className="text-primary underline underline-offset-2">
-                hunter.io/api-keys
-              </a>{" "}adresinden alabilirsiniz.
+              Hunter.io API anahtarınızı{" "}
+              <a href="https://hunter.io/api-keys" target="_blank" rel="noopener noreferrer" className="text-primary underline underline-offset-2">hunter.io/api-keys</a>
+              {" "}adresinden alabilirsiniz.
             </p>
-
-            {/* Kayıtlı key göster ya da giriş alanı */}
             {savedKey.saved ? (
               <div className="flex items-center gap-3">
                 <div className="flex-1 flex items-center gap-2 px-4 py-2.5 bg-input border border-border rounded-lg">
@@ -186,43 +258,28 @@ export default function LeadsModal({ onClose, onSelect }: Props) {
                   <span className="text-sm text-foreground font-mono">{savedKey.masked}</span>
                   <span className="text-xs text-primary bg-primary/10 px-2 py-0.5 rounded-full ml-auto">Kayıtlı</span>
                 </div>
-                <button
-                  onClick={handleDeleteKey}
-                  className="p-2.5 bg-input border border-border rounded-lg text-muted-foreground hover:text-destructive hover:border-destructive/40 transition-colors"
-                  title="API key'i sil"
-                >
+                <button onClick={handleDeleteKey} className="p-2.5 bg-input border border-border rounded-lg text-muted-foreground hover:text-destructive hover:border-destructive/40 transition-colors" title="Sil">
                   <Trash2 size={14} />
                 </button>
-                <button
-                  onClick={handleImport}
-                  disabled={importing}
-                  className="flex items-center gap-2 px-4 py-2.5 bg-primary text-[oklch(0.11_0.005_260)] rounded-lg text-sm font-semibold hover:opacity-90 disabled:opacity-50"
-                >
+                <button onClick={handleImport} disabled={importing}
+                  className="flex items-center gap-2 px-4 py-2.5 bg-primary text-[oklch(0.11_0.005_260)] rounded-lg text-sm font-semibold hover:opacity-90 disabled:opacity-50">
                   {importing ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
                   {importing ? "Aktarılıyor..." : "İçe Aktar"}
                 </button>
               </div>
             ) : (
               <div className="flex gap-3">
-                <input
-                  type="password"
-                  value={apiKeyInput}
-                  onChange={e => setApiKeyInput(e.target.value)}
+                <input type="password" value={apiKeyInput} onChange={e => setApiKeyInput(e.target.value)}
                   onKeyDown={e => e.key === "Enter" && handleSaveKey()}
                   placeholder="Hunter.io API Anahtarı"
-                  className="flex-1 px-4 py-2.5 bg-input border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
-                />
-                <button
-                  onClick={handleSaveKey}
-                  disabled={savingKey || !apiKeyInput.trim()}
-                  className="flex items-center gap-2 px-4 py-2.5 bg-secondary border border-border text-foreground rounded-lg text-sm font-medium hover:bg-muted disabled:opacity-50"
-                >
+                  className="flex-1 px-4 py-2.5 bg-input border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring" />
+                <button onClick={handleSaveKey} disabled={savingKey || !apiKeyInput.trim()}
+                  className="flex items-center gap-2 px-4 py-2.5 bg-secondary border border-border text-foreground rounded-lg text-sm font-medium hover:bg-muted disabled:opacity-50">
                   {savingKey ? <Loader2 size={14} className="animate-spin" /> : <Key size={14} />}
                   Kaydet
                 </button>
               </div>
             )}
-
             {importMsg && (
               <div className={`flex items-center gap-2 text-xs px-3 py-2 rounded-lg ${importMsg.type === "success" ? "bg-primary/10 text-primary" : "bg-destructive/10 text-destructive"}`}>
                 {importMsg.type === "success" ? <Check size={13} /> : <AlertCircle size={13} />}
@@ -235,39 +292,70 @@ export default function LeadsModal({ onClose, onSelect }: Props) {
         {/* Body */}
         <div className="flex flex-1 min-h-0">
           {/* Left: Company list */}
-          <div className="w-64 flex-shrink-0 border-r border-border flex flex-col">
+          <div className="w-72 flex-shrink-0 border-r border-border flex flex-col">
+            {/* Search */}
             <div className="p-3 border-b border-border">
               <div className="relative">
                 <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-                <input
-                  type="text"
-                  value={companySearch}
-                  onChange={e => setCompanySearch(e.target.value)}
+                <input type="text" value={companySearch} onChange={e => setCompanySearch(e.target.value)}
                   placeholder="Şirket ara..."
-                  className="w-full pl-8 pr-3 py-2 bg-input border border-border rounded-lg text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
-                />
+                  className="w-full pl-8 pr-3 py-2 bg-input border border-border rounded-lg text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring" />
               </div>
             </div>
+
+            {/* Tag filter chips */}
+            {tags.length > 0 && (
+              <div className="px-3 py-2.5 border-b border-border flex flex-wrap gap-1.5">
+                <button
+                  onClick={() => setActiveTag("")}
+                  className={`text-[11px] px-2.5 py-1 rounded-full border font-medium transition-colors ${activeTag === "" ? "bg-primary/20 text-primary border-primary/40" : "bg-secondary text-muted-foreground border-border hover:text-foreground"}`}
+                >
+                  Tümü
+                </button>
+                {tags.map(t => {
+                  const c = tagColor(t.tag);
+                  const isActive = activeTag === t.tag;
+                  return (
+                    <button
+                      key={t.tag}
+                      onClick={() => setActiveTag(isActive ? "" : t.tag)}
+                      className={`text-[11px] px-2.5 py-1 rounded-full border font-medium transition-all ${isActive ? `${c.bg} ${c.text} ${c.border} ring-1 ring-offset-0` : `bg-secondary text-muted-foreground border-border hover:${c.bg} hover:${c.text}`}`}
+                    >
+                      {t.tag}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Company rows */}
             <div className="flex-1 overflow-y-auto">
               {companies.length === 0 ? (
                 <div className="p-6 text-center text-xs text-muted-foreground">
                   <Building2 size={28} className="mx-auto mb-2 opacity-20" />
-                  Henüz şirket yok
+                  {activeTag ? `"${activeTag}" etiketinde şirket yok` : "Henüz şirket yok"}
                 </div>
               ) : (
                 companies.map(c => (
                   <button
                     key={c.company}
                     onClick={() => setSelectedCompany(c.company)}
-                    className={`w-full text-left px-4 py-3 border-b border-border/40 last:border-0 hover:bg-secondary transition-colors flex items-center justify-between gap-2 ${selectedCompany === c.company ? "bg-primary/10 border-l-2 border-l-primary" : ""}`}
+                    className={`w-full text-left px-4 py-3 border-b border-border/40 last:border-0 hover:bg-secondary transition-colors ${selectedCompany === c.company ? "bg-primary/10 border-l-2 border-l-primary" : ""}`}
                   >
-                    <div className="min-w-0">
-                      <p className="text-xs font-medium text-foreground truncate">{c.company}</p>
-                      {c.domain && <p className="text-[11px] text-muted-foreground truncate">{c.domain}</p>}
-                    </div>
-                    <div className="flex items-center gap-1 shrink-0">
-                      <span className="text-[10px] text-muted-foreground bg-secondary px-1.5 py-0.5 rounded-full">{c.count}</span>
-                      <ChevronRight size={12} className="text-muted-foreground" />
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs font-medium text-foreground truncate">{c.company}</p>
+                        {c.domain && <p className="text-[11px] text-muted-foreground truncate mt-0.5">{c.domain}</p>}
+                        {c.tags.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mt-1.5">
+                            {c.tags.map(tag => <TagBadge key={tag} tag={tag} small />)}
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-1 shrink-0 mt-0.5">
+                        <span className="text-[10px] text-muted-foreground bg-secondary px-1.5 py-0.5 rounded-full">{c.count}</span>
+                        <ChevronRight size={12} className="text-muted-foreground" />
+                      </div>
                     </div>
                   </button>
                 ))
@@ -290,19 +378,12 @@ export default function LeadsModal({ onClose, onSelect }: Props) {
                 <div className="p-3 border-b border-border flex gap-2">
                   <div className="relative flex-1">
                     <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-                    <input
-                      type="text"
-                      value={leadSearch}
-                      onChange={e => setLeadSearch(e.target.value)}
+                    <input type="text" value={leadSearch} onChange={e => setLeadSearch(e.target.value)}
                       placeholder="İsim veya email ara..."
-                      className="w-full pl-8 pr-3 py-2 bg-input border border-border rounded-lg text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
-                    />
+                      className="w-full pl-8 pr-3 py-2 bg-input border border-border rounded-lg text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring" />
                   </div>
-                  <select
-                    value={selectedTitle}
-                    onChange={e => setSelectedTitle(e.target.value)}
-                    className="px-3 py-2 bg-input border border-border rounded-lg text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
-                  >
+                  <select value={selectedTitle} onChange={e => setSelectedTitle(e.target.value)}
+                    className="px-3 py-2 bg-input border border-border rounded-lg text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring">
                     <option value="">Tüm Unvanlar</option>
                     {titles.map(t => <option key={t} value={t}>{t}</option>)}
                   </select>
@@ -310,12 +391,8 @@ export default function LeadsModal({ onClose, onSelect }: Props) {
 
                 {/* Table header */}
                 <div className="px-4 py-2.5 border-b border-border flex items-center gap-3 bg-secondary/50">
-                  <input
-                    type="checkbox"
-                    checked={leads.length > 0 && selected.size === leads.length}
-                    onChange={toggleAll}
-                    className="accent-primary w-3.5 h-3.5"
-                  />
+                  <input type="checkbox" checked={leads.length > 0 && selected.size === leads.length}
+                    onChange={toggleAll} className="accent-primary w-3.5 h-3.5" />
                   <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
                     {selected.size > 0 ? `${selected.size} seçili` : `${leads.length} kişi`}
                   </span>
@@ -331,16 +408,10 @@ export default function LeadsModal({ onClose, onSelect }: Props) {
                     <div className="flex items-center justify-center h-32 text-xs text-muted-foreground">Kişi bulunamadı</div>
                   ) : (
                     leads.map(lead => (
-                      <label
-                        key={lead.id}
-                        className={`flex items-center gap-3 px-4 py-3 border-b border-border/40 last:border-0 cursor-pointer transition-colors hover:bg-secondary ${selected.has(lead.id) ? "bg-primary/5" : ""}`}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={selected.has(lead.id)}
-                          onChange={() => toggleLead(lead.id)}
-                          className="accent-primary w-3.5 h-3.5 shrink-0"
-                        />
+                      <label key={lead.id}
+                        className={`flex items-center gap-3 px-4 py-3 border-b border-border/40 last:border-0 cursor-pointer transition-colors hover:bg-secondary ${selected.has(lead.id) ? "bg-primary/5" : ""}`}>
+                        <input type="checkbox" checked={selected.has(lead.id)} onChange={() => toggleLead(lead.id)}
+                          className="accent-primary w-3.5 h-3.5 shrink-0" />
                         <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center shrink-0 text-primary text-[11px] font-bold">
                           {(lead.firstName?.[0] || lead.email[0]).toUpperCase()}
                         </div>
@@ -373,11 +444,8 @@ export default function LeadsModal({ onClose, onSelect }: Props) {
             <button onClick={onClose} className="px-4 py-2.5 bg-secondary border border-border text-foreground rounded-lg text-sm font-medium hover:bg-muted transition-colors">
               İptal
             </button>
-            <button
-              onClick={handleSelect}
-              disabled={selected.size === 0}
-              className="flex items-center gap-2 px-5 py-2.5 bg-primary text-[oklch(0.11_0.005_260)] rounded-lg text-sm font-semibold hover:opacity-90 disabled:opacity-40 transition-opacity"
-            >
+            <button onClick={handleSelect} disabled={selected.size === 0}
+              className="flex items-center gap-2 px-5 py-2.5 bg-primary text-[oklch(0.11_0.005_260)] rounded-lg text-sm font-semibold hover:opacity-90 disabled:opacity-40 transition-opacity">
               <Check size={15} />Seçilenleri Ekle
             </button>
           </div>
