@@ -67,6 +67,30 @@ db.serialize(() => {
   db.run(`INSERT OR IGNORE INTO settings (key, value) VALUES ('send_overdue', 'false')`);
   db.run(`INSERT OR IGNORE INTO settings (key, value) VALUES ('ai_rules', '[{"id":1,"text":"Paragraflar arasına mutlaka boş satır bırak, her paragraf ayrı p tagı içinde olsun","active":true},{"id":2,"text":"Uzun cümleleri böl, kısa ve anlaşılır cümleler kullan","active":true},{"id":3,"text":"Önemli noktalarda vurgulama yap","active":true},{"id":4,"text":"Metnin başına gereksiz giriş cümlesi ekleme, direkt içeriğe gir","active":true}]')`);
 
+  // OTP kodları tablosu
+  db.run(`
+    CREATE TABLE IF NOT EXISTS otp_codes (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      code TEXT NOT NULL,
+      expiresAt DATETIME NOT NULL,
+      used INTEGER DEFAULT 0,
+      createdAt DATETIME DEFAULT (datetime('now'))
+    )
+  `);
+
+  // Cihaz oturumları tablosu
+  db.run(`
+    CREATE TABLE IF NOT EXISTS sessions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      deviceId TEXT NOT NULL,
+      deviceName TEXT,
+      ipAddress TEXT,
+      token TEXT UNIQUE NOT NULL,
+      createdAt DATETIME DEFAULT (datetime('now')),
+      expiresAt DATETIME NOT NULL,
+      isActive INTEGER DEFAULT 1
+    )
+  `);
 
   // Taslak maillar tablosu
   db.run(`

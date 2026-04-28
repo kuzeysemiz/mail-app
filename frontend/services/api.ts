@@ -7,6 +7,37 @@ const api = axios.create({
   headers: { "Content-Type": "application/json" },
 });
 
+// Her istekte localStorage'dan token ekle
+api.interceptors.request.use((config) => {
+  if (typeof window !== "undefined") {
+    const token = localStorage.getItem("authToken");
+    if (token) config.headers["Authorization"] = `Bearer ${token}`;
+  }
+  return config;
+});
+
+// 401 gelirse token temizle — sayfa reload ile login ekranı açılır
+api.interceptors.response.use(
+  (res) => res,
+  (err) => {
+    if (err.response?.status === 401 && typeof window !== "undefined") {
+      localStorage.removeItem("authToken");
+      localStorage.removeItem("authExpiry");
+      window.location.reload();
+    }
+    return Promise.reject(err);
+  }
+);
+
+export const authAPI = {
+  requestCode: () => api.post("/auth/request-code"),
+  verifyCode: (code: string, deviceId: string, deviceName: string) =>
+    api.post("/auth/verify-code", { code, deviceId, deviceName }),
+  me: () => api.get("/auth/me"),
+  getSessions: () => api.get("/auth/sessions"),
+  deleteSession: (id: number) => api.delete(`/auth/sessions/${id}`),
+};
+
 export const mailboxAPI = {
   create: (email: string, appPassword: string) =>
     api.post("/mailboxes/mailbox", { email, appPassword }),

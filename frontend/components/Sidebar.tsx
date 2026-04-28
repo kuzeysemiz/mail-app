@@ -1,12 +1,13 @@
 "use client";
-import { Mail, Plus, List, BarChart2, X } from "lucide-react";
+import { Mail, Plus, List, BarChart2, Monitor, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const NAV_ITEMS = [
-  { id: "mailbox", label: "Hesaplar", icon: Mail },
-  { id: "add",     label: "Mail Ekle", icon: Plus },
-  { id: "manage",  label: "Yönet",     icon: List },
-  { id: "logs",    label: "Loglar",    icon: BarChart2 },
+  { id: "mailbox", label: "Hesaplar",      icon: Mail },
+  { id: "add",     label: "Mail Ekle",     icon: Plus },
+  { id: "manage",  label: "Yönet",         icon: List },
+  { id: "logs",    label: "Loglar",        icon: BarChart2 },
+  { id: "devices", label: "Bağlı Cihazlar", icon: Monitor },
 ];
 
 interface Props {
@@ -21,12 +22,8 @@ export default function Sidebar({ activeTab, onTabChange, isOpen, onClose }: Pro
 
   return (
     <>
-      {/* Mobile overlay */}
       {isOpen && (
-        <div
-          className="fixed inset-0 z-40 bg-black/60 lg:hidden"
-          onClick={onClose}
-        />
+        <div className="fixed inset-0 z-40 bg-black/60 lg:hidden" onClick={onClose} />
       )}
 
       <aside

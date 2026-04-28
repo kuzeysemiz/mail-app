@@ -1,25 +1,78 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Menu } from "lucide-react";
 import Sidebar from "@/components/Sidebar";
 import dynamic from "next/dynamic";
+import { authAPI } from "@/services/api";
 
+const LoginScreen    = dynamic(() => import("@/components/LoginScreen"),    { ssr: false });
 const MailboxManager = dynamic(() => import("@/components/MailboxManager"), { ssr: false });
 const EmailAdder     = dynamic(() => import("@/components/EmailAdder"),     { ssr: false });
 const EmailManager   = dynamic(() => import("@/components/EmailManager"),   { ssr: false });
 const LogViewer      = dynamic(() => import("@/components/LogViewer"),      { ssr: false });
+const DeviceManager  = dynamic(() => import("@/components/DeviceManager"),  { ssr: false });
 
 const PAGE_TITLES: Record<string, string> = {
   mailbox: "Gmail Hesapları",
   add:     "Mail Ekle",
   manage:  "Mail Listeleri",
   logs:    "Gönderim Logları",
+  devices: "Bağlı Cihazlar",
 };
 
 export default function Home() {
   const [activeTab, setActiveTab]     = useState("mailbox");
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  // null = henüz kontrol edilmedi, true = giriş yapıldı, false = giriş yapılmadı
+  const [authed, setAuthed]           = useState<boolean | null>(null);
 
+  useEffect(() => {
+    checkAuth();
+  }, []);
+
+  const checkAuth = async () => {
+    const token  = localStorage.getItem("authToken");
+    const expiry = localStorage.getItem("authExpiry");
+
+    if (!token || !expiry) { setAuthed(false); return; }
+
+    // Client-side expiry kontrolü
+    if (new Date(expiry) < new Date()) {
+      localStorage.removeItem("authToken");
+      localStorage.removeItem("authExpiry");
+      setAuthed(false);
+      return;
+    }
+
+    // Sunucudan doğrula
+    try {
+      await authAPI.me();
+      setAuthed(true);
+    } catch {
+      localStorage.removeItem("authToken");
+      localStorage.removeItem("authExpiry");
+      setAuthed(false);
+    }
+  };
+
+  const handleLogin = () => setAuthed(true);
+
+  // Yükleniyor
+  if (authed === null) {
+    return (
+      <div style={{ minHeight: "100vh", background: "#fff", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <div style={{ width: 36, height: 36, border: "3px solid #e5e7eb", borderTopColor: "#00c896", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      </div>
+    );
+  }
+
+  // Giriş yapılmadı
+  if (!authed) {
+    return <LoginScreen onLogin={handleLogin} />;
+  }
+
+  // Ana uygulama
   return (
     <div className="flex h-screen overflow-hidden bg-background">
       <Sidebar
@@ -30,7 +83,6 @@ export default function Home() {
       />
 
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        {/* Top header */}
         <header className="flex items-center justify-between px-6 py-4 border-b border-border bg-card shrink-0">
           <div className="flex items-center gap-3">
             <button
@@ -50,12 +102,12 @@ export default function Home() {
           </div>
         </header>
 
-        {/* Page content */}
         <main className="flex-1 overflow-y-auto p-6 lg:p-8">
           {activeTab === "mailbox" && <MailboxManager />}
           {activeTab === "add"     && <EmailAdder />}
           {activeTab === "manage"  && <EmailManager />}
           {activeTab === "logs"    && <LogViewer />}
+          {activeTab === "devices" && <DeviceManager />}
         </main>
       </div>
     </div>
