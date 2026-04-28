@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import "react-quill/dist/quill.snow.css";
+import "react-quill-new/dist/quill.snow.css";
 
 export const metadata: Metadata = {
   title: "Mail Sistemi",

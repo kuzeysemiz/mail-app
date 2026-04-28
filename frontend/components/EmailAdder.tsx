@@ -5,7 +5,7 @@ import { Sparkles, Settings2, Languages, BookOpen, Plus, FileText, Trash2, Edit2
 import { cn } from "@/lib/utils";
 import { mailboxAPI, emailAPI, draftAPI, savedEmailsAPI, aiAPI, settingsAPI } from "@/services/api";
 
-const ReactQuill = dynamic(() => import("react-quill"), { ssr: false, loading: () => <div className="h-40 bg-input border border-border rounded-lg animate-pulse" /> });
+const ReactQuill = dynamic(() => import("react-quill-new"), { ssr: false, loading: () => <div className="h-40 bg-input border border-border rounded-lg animate-pulse" /> });
 
 const QUILL_MODULES = {
   toolbar: [

@@ -43,7 +43,7 @@ jobs:
       - name: Build Next.js app
         run: |
           cd frontend
-          npm ci
+          npm install --legacy-peer-deps
           NEXT_PUBLIC_API_URL=/api npm run build
           ls out/index.html && echo "✅ Next.js build başarılı" || echo "❌ Build çıktısı yok"
 
