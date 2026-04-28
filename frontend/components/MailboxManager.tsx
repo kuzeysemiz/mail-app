@@ -7,13 +7,13 @@ interface Mailbox { id: number; email: string; createdAt: string; }
 
 function StatCard({ icon, value, label }: { icon: React.ReactNode; value: number | string; label: string }) {
   return (
-    <div className="bg-card border border-border rounded-xl p-5 flex items-center gap-4" style={{ borderColor: "oklch(0.28 0.006 260)" }}>
-      <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0" style={{ background: "oklch(0.72 0.19 155 / 0.15)", color: "oklch(0.72 0.19 155)" }}>
+    <div className="bg-card border border-border rounded-xl p-6 flex items-center gap-5" style={{ borderColor: "var(--border)" }}>
+      <div className="w-14 h-14 rounded-xl flex items-center justify-center shrink-0" style={{ background: "oklch(0.72 0.19 155 / 0.15)", color: "oklch(0.72 0.19 155)" }}>
         {icon}
       </div>
       <div>
-        <p className="text-2xl font-bold text-foreground">{value}</p>
-        <p className="text-sm text-muted-foreground">{label}</p>
+        <p className="text-3xl font-bold text-foreground">{value}</p>
+        <p className="text-sm text-muted-foreground mt-1">{label}</p>
       </div>
     </div>
   );
@@ -73,15 +73,15 @@ export default function MailboxManager() {
   return (
     <div className="space-y-6">
       {/* Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <StatCard icon={<Users size={20} />} value={mailboxes.length} label="Bağlı Hesap" />
-        <StatCard icon={<Send size={20} />}  value={totalSent}         label="Gönderilen Mail" />
-        <StatCard icon={<Clock size={20} />} value="--"               label="Son Aktivite" />
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+        <StatCard icon={<Users size={24} />} value={mailboxes.length} label="Bağlı Hesap" />
+        <StatCard icon={<Send size={24} />}  value={totalSent}         label="Gönderilen Mail" />
+        <StatCard icon={<Clock size={24} />} value="--"               label="Son Aktivite" />
       </div>
 
       {/* Alert */}
       {msg.text && (
-        <div className={`px-4 py-3 rounded-lg text-sm border ${
+        <div className={`px-5 py-4 rounded-xl text-sm border ${
           msg.type === "success"
             ? "bg-primary/10 text-primary border-primary/20"
             : "bg-destructive/10 text-destructive border-destructive/20"
@@ -91,29 +91,29 @@ export default function MailboxManager() {
       {/* Cards */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Add form */}
-        <div className="bg-card border border-border rounded-xl p-6">
-          <div className="flex items-center gap-2.5 mb-1">
+        <div className="bg-card border border-border rounded-xl p-7">
+          <div className="flex items-center gap-3 mb-2">
             <div className="w-5 h-5 rounded-full border-2 border-primary flex items-center justify-center">
               <span className="w-2 h-2 rounded-full bg-primary" />
             </div>
             <h2 className="font-semibold text-foreground">Hesap Ekle</h2>
           </div>
-          <p className="text-sm text-muted-foreground mb-6">Gmail SMTP üzerinden mail göndermek için yeni hesap ekleyin.</p>
+          <p className="text-sm text-muted-foreground mb-7">Gmail SMTP üzerinden mail göndermek için yeni hesap ekleyin.</p>
 
-          <form onSubmit={handleAdd} className="space-y-4">
+          <form onSubmit={handleAdd} className="space-y-5">
             <div>
-              <label className="flex items-center gap-1.5 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">
-                <Mail size={12} /> Gmail Adresi
+              <label className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2.5">
+                <Mail size={13} /> Gmail Adresi
               </label>
               <input
                 type="email" value={email} onChange={e => setEmail(e.target.value)}
                 placeholder="ornek@gmail.com"
-                className="w-full px-3 py-2.5 bg-input border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                className="w-full px-4 py-3 bg-input border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
               />
             </div>
 
             <div>
-              <label className="flex items-center gap-1.5 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+              <label className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2.5">
                 🔑 Uygulama Şifresi
                 <span className="normal-case text-primary cursor-help" title="Google hesabınızdan oluşturulan 16 haneli uygulama şifresi">ⓘ</span>
               </label>
@@ -123,30 +123,30 @@ export default function MailboxManager() {
                   value={appPassword}
                   onChange={e => setAppPassword(e.target.value.replace(/\s/g, "").slice(0, 16))}
                   placeholder="xxxxxxxxxxxxxxxx"
-                  className="w-full px-3 py-2.5 bg-input border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring pr-10"
+                  className="w-full px-4 py-3 bg-input border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring pr-11"
                 />
                 <button type="button" onClick={() => setShowPw(!showPw)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
-                  {showPw ? <EyeOff size={14} /> : <Eye size={14} />}
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                  {showPw ? <EyeOff size={15} /> : <Eye size={15} />}
                 </button>
               </div>
-              <p className="text-[11px] text-muted-foreground mt-1">{appPassword.length}/16 karakter</p>
+              <p className="text-xs text-muted-foreground mt-2">{appPassword.length}/16 karakter</p>
             </div>
 
             <button type="submit" disabled={loading}
-              className="w-full flex items-center justify-center gap-2 py-2.5 bg-primary text-[oklch(0.11_0.005_260)] rounded-lg text-sm font-semibold hover:opacity-90 transition-opacity disabled:opacity-50">
-              <Plus size={15} />
+              className="w-full flex items-center justify-center gap-2 py-3 bg-primary text-[oklch(0.11_0.005_260)] rounded-lg text-sm font-semibold hover:opacity-90 transition-opacity disabled:opacity-50">
+              <Plus size={16} />
               {loading ? "Ekleniyor..." : "Hesabı Ekle"}
             </button>
           </form>
 
           {/* Instructions */}
-          <div className="mt-5 p-4 bg-secondary rounded-lg">
-            <div className="flex items-center gap-2 mb-2.5">
+          <div className="mt-6 p-5 bg-secondary rounded-xl">
+            <div className="flex items-center gap-2 mb-3">
               <CheckCircle2 size={16} className="text-primary" />
               <span className="text-sm font-medium">Uygulama Şifresi Nasıl Alınır?</span>
             </div>
-            <ol className="text-xs text-muted-foreground space-y-1.5">
+            <ol className="text-xs text-muted-foreground space-y-2">
               {["Google hesabınıza giriş yapın","Güvenlik ayarlarına gidin","2 Adımlı Doğrulama aktif olmalı","Uygulama şifreleri bölümünü açın","Yeni uygulama şifresi oluşturun"]
                 .map((s, i) => <li key={i}>{i+1}. {s}</li>)}
             </ol>
@@ -154,55 +154,55 @@ export default function MailboxManager() {
         </div>
 
         {/* Accounts table */}
-        <div className="bg-card border border-border rounded-xl p-6">
-          <div className="flex items-center justify-between mb-1">
-            <div className="flex items-center gap-2">
-              <Users size={17} className="text-primary" />
+        <div className="bg-card border border-border rounded-xl p-7">
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-2.5">
+              <Users size={18} className="text-primary" />
               <h2 className="font-semibold">Ekli Hesaplar</h2>
             </div>
-            <span className="text-xs bg-secondary text-muted-foreground px-2.5 py-1 rounded-full">
+            <span className="text-xs bg-secondary text-muted-foreground px-3 py-1.5 rounded-full">
               {mailboxes.length} hesap
             </span>
           </div>
-          <p className="text-sm text-muted-foreground mb-6">SMTP bağlantısı yapılmış Gmail hesaplarınız.</p>
+          <p className="text-sm text-muted-foreground mb-7">SMTP bağlantısı yapılmış Gmail hesaplarınız.</p>
 
           {mailboxes.length === 0 ? (
-            <div className="text-center py-14 text-muted-foreground">
-              <Mail size={36} className="mx-auto mb-3 opacity-20" />
+            <div className="text-center py-16 text-muted-foreground">
+              <Mail size={40} className="mx-auto mb-4 opacity-20" />
               <p className="text-sm">Henüz hesap eklenmedi</p>
             </div>
           ) : (
-            <div className="overflow-x-auto -mx-1">
+            <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-border">
                     {["Email","Eklenme Tarihi","Durum","İşlem"].map((h, i) => (
-                      <th key={h} className={`pb-3 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider ${i === 3 ? "text-right pr-1" : "text-left"}`}>{h}</th>
+                      <th key={h} className={`pb-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider ${i === 3 ? "text-right pr-1" : "text-left"}`}>{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
                   {mailboxes.map(mb => (
                     <tr key={mb.id} className="border-b border-border/40 last:border-0">
-                      <td className="py-3">
-                        <div className="flex items-center gap-2">
-                          <div className="w-7 h-7 rounded-md bg-primary/10 flex items-center justify-center shrink-0">
-                            <Mail size={13} className="text-primary" />
+                      <td className="py-4">
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-8 h-8 rounded-md bg-primary/10 flex items-center justify-center shrink-0">
+                            <Mail size={14} className="text-primary" />
                           </div>
-                          <span className="truncate max-w-[160px] text-foreground">{mb.email}</span>
+                          <span className="truncate max-w-[150px] text-foreground">{mb.email}</span>
                         </div>
                       </td>
-                      <td className="py-3 text-muted-foreground whitespace-nowrap">{fmt(mb.createdAt)}</td>
-                      <td className="py-3">
-                        <span className="inline-flex items-center gap-1.5 px-2 py-0.5 text-[11px] rounded-full bg-primary/10 text-primary border border-primary/20 whitespace-nowrap">
+                      <td className="py-4 text-muted-foreground whitespace-nowrap">{fmt(mb.createdAt)}</td>
+                      <td className="py-4">
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs rounded-full bg-primary/10 text-primary border border-primary/20 whitespace-nowrap">
                           <span className="w-1.5 h-1.5 rounded-full bg-primary" />
                           Bağlı
                         </span>
                       </td>
-                      <td className="py-3 text-right">
+                      <td className="py-4 text-right">
                         <button onClick={() => handleDelete(mb.id)}
-                          className="p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors">
-                          <Trash2 size={14} />
+                          className="p-2 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors">
+                          <Trash2 size={15} />
                         </button>
                       </td>
                     </tr>

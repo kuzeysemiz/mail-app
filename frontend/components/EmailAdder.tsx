@@ -203,29 +203,29 @@ export default function EmailAdder() {
   const activeRules = aiRules.filter(r => r.active).length;
 
   return (
-    <div className="space-y-5 max-w-4xl">
+    <div className="space-y-6 max-w-4xl">
       {msg.text && (
-        <div className={`px-4 py-3 rounded-lg text-sm border ${msg.type === "success" ? "bg-primary/10 text-primary border-primary/20" : msg.type === "error" ? "bg-destructive/10 text-destructive border-destructive/20" : "bg-secondary text-foreground border-border"}`}>
+        <div className={`px-5 py-4 rounded-xl text-sm border ${msg.type === "success" ? "bg-primary/10 text-primary border-primary/20" : msg.type === "error" ? "bg-destructive/10 text-destructive border-destructive/20" : "bg-secondary text-foreground border-border"}`}>
           {msg.text}
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="space-y-5">
+      <form onSubmit={handleSubmit} className="space-y-6">
         {/* Mailbox + Recipients */}
-        <div className="bg-card border border-border rounded-xl p-5 space-y-4">
-          <h3 className="text-sm font-semibold text-foreground flex items-center gap-2"><Send size={15} className="text-primary" />Gönderim Ayarları</h3>
+        <div className="bg-card border border-border rounded-xl p-7 space-y-5">
+          <h3 className="text-sm font-semibold text-foreground flex items-center gap-2"><Send size={16} className="text-primary" />Gönderim Ayarları</h3>
 
           <div>
-            <label className="block text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Gmail Hesabı</label>
+            <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Gmail Hesabı</label>
             <select value={selectedMailbox} onChange={e => setSelectedMailbox(e.target.value)}
-              className="w-full px-3 py-2.5 bg-input border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring">
+              className="w-full px-4 py-3 bg-input border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring">
               <option value="">-- Hesap Seçin --</option>
               {mailboxes.map(mb => <option key={mb.id} value={mb.id}>{mb.email}</option>)}
             </select>
           </div>
 
           <div>
-            <label className="block text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Mail Adresleri (Her satıra bir)</label>
+            <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Mail Adresleri (Her satıra bir)</label>
             <div className="relative">
               <textarea
                 ref={textareaRef}
@@ -234,72 +234,72 @@ export default function EmailAdder() {
                 onKeyDown={handleRecipientsKeyDown}
                 placeholder={"example1@gmail.com\nexample2@gmail.com\nexample3@gmail.com"}
                 rows={5}
-                className="w-full px-3 py-2.5 bg-input border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring resize-y font-mono"
+                className="w-full px-4 py-3 bg-input border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring resize-y font-mono"
               />
             </div>
-            <p className="text-[11px] text-muted-foreground mt-1">{recipientCount} / 100 {suggestion.text && <span className="text-primary">• Tab ile tamamla</span>}</p>
+            <p className="text-xs text-muted-foreground mt-2">{recipientCount} / 100 {suggestion.text && <span className="text-primary">• Tab ile tamamla</span>}</p>
           </div>
 
           <div>
-            <label className="block text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Mail Başlığı</label>
+            <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Mail Başlığı</label>
             <input type="text" value={mailSubject} onChange={e => setMailSubject(e.target.value)}
               placeholder="Mail başlığını yazın..."
-              className="w-full px-3 py-2.5 bg-input border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring" />
+              className="w-full px-4 py-3 bg-input border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring" />
           </div>
         </div>
 
         {/* Content + AI */}
-        <div className="bg-card border border-border rounded-xl p-5 space-y-4">
-          <h3 className="text-sm font-semibold text-foreground flex items-center gap-2"><FileText size={15} className="text-primary" />Mail İçeriği</h3>
+        <div className="bg-card border border-border rounded-xl p-7 space-y-5">
+          <h3 className="text-sm font-semibold text-foreground flex items-center gap-2"><FileText size={16} className="text-primary" />Mail İçeriği</h3>
 
           <ReactQuill value={mailContent} onChange={setMailContent} modules={QUILL_MODULES} formats={QUILL_FORMATS} theme="snow" placeholder="Mailinizin içeriğini buraya yazın..." />
 
           {/* AI Toolbar */}
-          <div className="flex flex-wrap items-center gap-2 pt-1">
+          <div className="flex flex-wrap items-center gap-2.5 pt-1">
             <button type="button" onClick={() => handleAIEnhance("basic")} disabled={aiLoading}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-violet-600 to-purple-600 text-white rounded-lg text-xs font-semibold hover:opacity-90 transition-opacity disabled:opacity-50">
+              className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-violet-600 to-purple-600 text-white rounded-lg text-xs font-semibold hover:opacity-90 transition-opacity disabled:opacity-50">
               <Sparkles size={13} />{aiLoading && !showAdvancedAI ? "Geliştiriliyor..." : "AI ile Geliştir"}
             </button>
             <button type="button" onClick={() => setShowAdvancedAI(v => !v)} disabled={aiLoading}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-secondary border border-border text-foreground rounded-lg text-xs font-medium hover:bg-muted transition-colors disabled:opacity-50">
+              className="flex items-center gap-2 px-4 py-2 bg-secondary border border-border text-foreground rounded-lg text-xs font-medium hover:bg-muted transition-colors disabled:opacity-50">
               <Settings2 size={13} />Gelişmiş AI
             </button>
 
             {langButtons.map(btn => (
               <div key={btn.id} className="flex items-stretch border border-primary/50 rounded-lg overflow-hidden">
                 <button type="button" onClick={() => handleTranslate(btn.lang)} disabled={aiLoading}
-                  className="flex items-center gap-1 px-2.5 py-1.5 bg-primary/10 text-primary text-xs font-medium hover:bg-primary/20 transition-colors disabled:opacity-50">
+                  className="flex items-center gap-1.5 px-3 py-2 bg-primary/10 text-primary text-xs font-medium hover:bg-primary/20 transition-colors disabled:opacity-50">
                   <Languages size={12} />{btn.lang}
                 </button>
                 <button type="button" onClick={() => saveLangButtons(langButtons.filter(b => b.id !== btn.id))}
-                  className="px-2 py-1.5 bg-primary/5 text-muted-foreground border-l border-primary/30 hover:bg-destructive/10 hover:text-destructive transition-colors text-xs">×</button>
+                  className="px-2.5 py-2 bg-primary/5 text-muted-foreground border-l border-primary/30 hover:bg-destructive/10 hover:text-destructive transition-colors text-xs">×</button>
               </div>
             ))}
 
             <select value="" onChange={e => { handleAddLangButton(e.target.value); (e.target as HTMLSelectElement).value = ""; }}
-              className="px-2.5 py-1.5 bg-secondary border border-border rounded-lg text-xs text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring cursor-pointer">
+              className="px-3 py-2 bg-secondary border border-border rounded-lg text-xs text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring cursor-pointer">
               <option value="">+ Dil Ekle</option>
               {LANGS.map(l => <option key={l} value={l}>{l}</option>)}
             </select>
 
             <div className="relative" ref={rulesPanelRef}>
               <button type="button" onClick={() => setShowRulesPanel(v => !v)}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-secondary border border-border text-foreground rounded-lg text-xs font-medium hover:bg-muted transition-colors">
+                className="flex items-center gap-2 px-4 py-2 bg-secondary border border-border text-foreground rounded-lg text-xs font-medium hover:bg-muted transition-colors">
                 <BookOpen size={13} />Kurallar {aiRules.length > 0 && <span className="px-1.5 py-0.5 bg-primary/20 text-primary rounded-full text-[10px] font-bold">{activeRules}/{aiRules.length}</span>}
               </button>
               {showRulesPanel && (
-                <div className="absolute top-full left-0 mt-1 z-50 w-72 bg-card border border-border rounded-xl shadow-xl p-3">
-                  <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-3">AI Yazım Kuralları</p>
-                  <div className="flex gap-2 mb-3">
+                <div className="absolute top-full left-0 mt-2 z-50 w-80 bg-card border border-border rounded-xl shadow-xl p-4">
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-4">AI Yazım Kuralları</p>
+                  <div className="flex gap-2 mb-4">
                     <input type="text" value={newRuleText} onChange={e => setNewRuleText(e.target.value)}
                       onKeyDown={e => e.key === "Enter" && handleAddRule()}
-                      placeholder="Yeni kural..." className="flex-1 px-2.5 py-1.5 bg-input border border-border rounded-lg text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring" />
-                    <button type="button" onClick={handleAddRule} className="px-2.5 py-1.5 bg-primary text-[oklch(0.11_0.005_260)] rounded-lg text-xs font-semibold hover:opacity-90">Ekle</button>
+                      placeholder="Yeni kural..." className="flex-1 px-3 py-2 bg-input border border-border rounded-lg text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring" />
+                    <button type="button" onClick={handleAddRule} className="px-3 py-2 bg-primary text-[oklch(0.11_0.005_260)] rounded-lg text-xs font-semibold hover:opacity-90">Ekle</button>
                   </div>
-                  <div className="space-y-1.5 max-h-48 overflow-y-auto">
-                    {aiRules.length === 0 && <p className="text-xs text-muted-foreground text-center py-3">Henüz kural yok</p>}
+                  <div className="space-y-2 max-h-48 overflow-y-auto">
+                    {aiRules.length === 0 && <p className="text-xs text-muted-foreground text-center py-4">Henüz kural yok</p>}
                     {aiRules.map(rule => (
-                      <div key={rule.id} className={cn("flex items-center gap-2 p-2 rounded-lg border", rule.active ? "border-border bg-secondary" : "border-border/30 bg-transparent opacity-50")}>
+                      <div key={rule.id} className={cn("flex items-center gap-2 p-2.5 rounded-lg border", rule.active ? "border-border bg-secondary" : "border-border/30 bg-transparent opacity-50")}>
                         <input type="checkbox" checked={rule.active} onChange={() => saveRules(aiRules.map(r => r.id === rule.id ? {...r, active: !r.active} : r))} className="accent-primary" />
                         <span className="flex-1 text-xs text-foreground">{rule.text}</span>
                         <button type="button" onClick={() => saveRules(aiRules.filter(r => r.id !== rule.id))} className="text-muted-foreground hover:text-destructive text-sm">×</button>
@@ -312,47 +312,47 @@ export default function EmailAdder() {
           </div>
 
           {showAdvancedAI && (
-            <div className="p-4 bg-secondary border border-border rounded-xl space-y-3">
-              <label className="block text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Nasıl geliştirmek istiyorsunuz?</label>
+            <div className="p-5 bg-secondary border border-border rounded-xl space-y-4">
+              <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider">Nasıl geliştirmek istiyorsunuz?</label>
               <textarea value={advancedPrompt} onChange={e => setAdvancedPrompt(e.target.value)} rows={3}
                 placeholder="Örn: İngilizce'ye çevir ve daha resmi bir dil kullan..."
-                className="w-full px-3 py-2.5 bg-input border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring resize-none" />
+                className="w-full px-4 py-3 bg-input border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring resize-none" />
               <button type="button" onClick={() => handleAIEnhance("advanced")} disabled={aiLoading}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-violet-600 to-purple-600 text-white rounded-lg text-xs font-semibold hover:opacity-90 disabled:opacity-50">
+                className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-violet-600 to-purple-600 text-white rounded-lg text-xs font-semibold hover:opacity-90 disabled:opacity-50">
                 <Sparkles size={12} />{aiLoading ? "Geliştiriliyor..." : "Uygula"}
               </button>
             </div>
           )}
 
           <div>
-            <label className="block text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">İmza (Opsiyonel)</label>
+            <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">İmza (Opsiyonel)</label>
             <ReactQuill value={mailSignature} onChange={setMailSignature} modules={QUILL_MODULES} formats={QUILL_FORMATS} theme="snow" placeholder="Mail imzanızı buraya yazın..." />
           </div>
         </div>
 
         {/* Schedule */}
-        <div className="bg-card border border-border rounded-xl p-5 space-y-4">
-          <h3 className="text-sm font-semibold text-foreground flex items-center gap-2"><Calendar size={15} className="text-primary" />Zamanlama</h3>
+        <div className="bg-card border border-border rounded-xl p-7 space-y-5">
+          <h3 className="text-sm font-semibold text-foreground flex items-center gap-2"><Calendar size={16} className="text-primary" />Zamanlama</h3>
 
           <div className="flex gap-1 p-1 bg-secondary rounded-lg w-fit">
             {(["auto","week","manual"] as const).map(mode => (
               <button key={mode} type="button" onClick={() => setScheduleMode(mode)}
-                className={cn("px-4 py-1.5 rounded-md text-xs font-medium transition-colors", scheduleMode === mode ? "bg-primary text-[oklch(0.11_0.005_260)]" : "text-muted-foreground hover:text-foreground")}>
+                className={cn("px-5 py-2 rounded-md text-xs font-medium transition-colors", scheduleMode === mode ? "bg-primary text-[oklch(0.11_0.005_260)]" : "text-muted-foreground hover:text-foreground")}>
                 {mode === "auto" ? "Otomatik" : mode === "week" ? "Ayın Haftası" : "Manuel"}
               </button>
             ))}
           </div>
 
-          <label className="flex items-center gap-2.5 cursor-pointer w-fit">
+          <label className="flex items-center gap-3 cursor-pointer w-fit">
             <input type="checkbox" checked={businessHours} onChange={e => setBusinessHours(e.target.checked)} className="w-4 h-4 accent-primary rounded" />
             <span className="text-sm text-foreground">Mesai saatleri (Pzt–Cum, 09:00–17:59)</span>
           </label>
 
           {scheduleMode === "week" && (
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-4">
               <label className="text-sm text-muted-foreground">Hafta:</label>
               <select value={selectedWeek} onChange={e => setSelectedWeek(e.target.value)}
-                className="px-3 py-2 bg-input border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring">
+                className="px-4 py-2.5 bg-input border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring">
                 <option value="1">1. Hafta (1–7)</option>
                 <option value="2">2. Hafta (8–14)</option>
                 <option value="3">3. Hafta (15–21)</option>
@@ -361,46 +361,46 @@ export default function EmailAdder() {
             </div>
           )}
           {scheduleMode === "manual" && (
-            <div className="flex flex-wrap items-center gap-4">
-              <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-5">
+              <div className="flex items-center gap-3">
                 <label className="text-sm text-muted-foreground">Tarih:</label>
                 <input type="date" value={manualDate} min={new Date().toISOString().split("T")[0]} onChange={e => setManualDate(e.target.value)}
-                  className="px-3 py-2 bg-input border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring" />
+                  className="px-4 py-2.5 bg-input border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring" />
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-3">
                 <label className="text-sm text-muted-foreground">Saat:</label>
                 <input type="time" value={manualTime} onChange={e => setManualTime(e.target.value)}
-                  className="px-3 py-2 bg-input border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring" />
+                  className="px-4 py-2.5 bg-input border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring" />
               </div>
             </div>
           )}
         </div>
 
         {/* Actions */}
-        <div className="flex flex-wrap gap-3">
+        <div className="flex flex-wrap gap-4">
           <button type="submit" disabled={loading}
-            className="flex items-center gap-2 px-5 py-2.5 bg-primary text-[oklch(0.11_0.005_260)] rounded-lg text-sm font-semibold hover:opacity-90 transition-opacity disabled:opacity-50">
-            <Zap size={15} />{loading ? "Ekleniyor..." : "Mailları Ekle ve Planla"}
+            className="flex items-center gap-2 px-6 py-3 bg-primary text-[oklch(0.11_0.005_260)] rounded-lg text-sm font-semibold hover:opacity-90 transition-opacity disabled:opacity-50">
+            <Zap size={16} />{loading ? "Ekleniyor..." : "Mailları Ekle ve Planla"}
           </button>
           <button type="button" onClick={() => setShowDraftSave(v => !v)}
-            className="flex items-center gap-2 px-4 py-2.5 bg-secondary border border-border text-foreground rounded-lg text-sm font-medium hover:bg-muted transition-colors">
-            <FileText size={15} />{showDraftSave ? "İptal" : "Taslağı Kaydet"}
+            className="flex items-center gap-2 px-5 py-3 bg-secondary border border-border text-foreground rounded-lg text-sm font-medium hover:bg-muted transition-colors">
+            <FileText size={16} />{showDraftSave ? "İptal" : "Taslağı Kaydet"}
           </button>
           <button type="button" onClick={() => setShowDrafts(v => !v)}
-            className="flex items-center gap-2 px-4 py-2.5 bg-secondary border border-border text-foreground rounded-lg text-sm font-medium hover:bg-muted transition-colors">
-            <BookOpen size={15} />Taslaklar ({drafts.length})
-            {showDrafts ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+            className="flex items-center gap-2 px-5 py-3 bg-secondary border border-border text-foreground rounded-lg text-sm font-medium hover:bg-muted transition-colors">
+            <BookOpen size={16} />Taslaklar ({drafts.length})
+            {showDrafts ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
           </button>
         </div>
 
         {showDraftSave && (
-          <div className="bg-secondary border border-border rounded-xl p-4 space-y-3">
-            <label className="block text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Taslak Adı</label>
-            <div className="flex gap-2">
+          <div className="bg-secondary border border-border rounded-xl p-5 space-y-4">
+            <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider">Taslak Adı</label>
+            <div className="flex gap-3">
               <input type="text" value={draftName} onChange={e => setDraftName(e.target.value)} placeholder="Taslak adını yazın..."
-                className="flex-1 px-3 py-2 bg-input border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring" />
+                className="flex-1 px-4 py-3 bg-input border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring" />
               <button type="button" onClick={handleSaveDraft}
-                className="px-4 py-2 bg-primary text-[oklch(0.11_0.005_260)] rounded-lg text-sm font-semibold hover:opacity-90">
+                className="px-5 py-3 bg-primary text-[oklch(0.11_0.005_260)] rounded-lg text-sm font-semibold hover:opacity-90">
                 {editingDraftId ? "Güncelle" : "Kaydet"}
               </button>
             </div>
@@ -410,22 +410,22 @@ export default function EmailAdder() {
 
       {/* Draft list */}
       {showDrafts && drafts.length > 0 && (
-        <div className="bg-card border border-border rounded-xl p-5">
-          <h3 className="text-sm font-semibold mb-4">Kayıtlı Taslaklar</h3>
-          <div className="space-y-2">
+        <div className="bg-card border border-border rounded-xl p-7">
+          <h3 className="text-sm font-semibold mb-5">Kayıtlı Taslaklar</h3>
+          <div className="space-y-3">
             {drafts.map(d => (
-              <div key={d.id} className="flex items-center justify-between p-3 bg-secondary rounded-lg border border-border/50">
+              <div key={d.id} className="flex items-center justify-between p-4 bg-secondary rounded-xl border border-border/50">
                 <div>
                   <p className="text-sm font-medium text-foreground">{d.draftName}</p>
-                  <p className="text-xs text-muted-foreground">{d.mailSubject}</p>
+                  <p className="text-xs text-muted-foreground mt-1">{d.mailSubject}</p>
                 </div>
                 <div className="flex gap-2">
                   <button onClick={() => { setMailSubject(d.mailSubject); setMailContent(d.mailContent); setMailSignature(d.mailSignature||""); showMessage(`"${d.draftName}" yüklendi`, "success"); }}
-                    className="p-1.5 text-primary hover:bg-primary/10 rounded-md transition-colors text-xs">Yükle</button>
+                    className="px-3 py-1.5 text-primary hover:bg-primary/10 rounded-md transition-colors text-xs font-medium">Yükle</button>
                   <button onClick={() => { setEditingDraftId(d.id); setDraftName(d.draftName); setMailSubject(d.mailSubject); setMailContent(d.mailContent); setMailSignature(d.mailSignature||""); setShowDraftSave(true); }}
-                    className="p-1.5 text-muted-foreground hover:text-foreground rounded-md transition-colors"><Edit2 size={13} /></button>
+                    className="p-2 text-muted-foreground hover:text-foreground rounded-md transition-colors"><Edit2 size={14} /></button>
                   <button onClick={async () => { if (confirm("Taslağı sil?")) { await draftAPI.delete(d.id); draftAPI.getByMailbox(selectedMailbox).then(r => setDrafts(r.data)).catch(()=>{}); }}}
-                    className="p-1.5 text-muted-foreground hover:text-destructive rounded-md transition-colors"><Trash2 size={13} /></button>
+                    className="p-2 text-muted-foreground hover:text-destructive rounded-md transition-colors"><Trash2 size={14} /></button>
                 </div>
               </div>
             ))}
@@ -435,26 +435,26 @@ export default function EmailAdder() {
 
       {/* Schedule preview */}
       {previewSchedule.length > 0 && (
-        <div className="bg-card border border-border rounded-xl p-5">
-          <h3 className="text-sm font-semibold mb-4 flex items-center gap-2"><Clock size={15} className="text-primary" />Zamanlama Önizleme</h3>
+        <div className="bg-card border border-border rounded-xl p-7">
+          <h3 className="text-sm font-semibold mb-5 flex items-center gap-2"><Clock size={16} className="text-primary" />Zamanlama Önizleme</h3>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead><tr className="border-b border-border">
-                <th className="pb-2 text-left text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">#</th>
-                <th className="pb-2 text-left text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Tarih</th>
-                <th className="pb-2 text-left text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Saat</th>
+                <th className="pb-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">#</th>
+                <th className="pb-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">Tarih</th>
+                <th className="pb-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">Saat</th>
               </tr></thead>
               <tbody>
                 {previewSchedule.slice(0, 10).map((s, i) => (
                   <tr key={i} className="border-b border-border/40 last:border-0">
-                    <td className="py-2 text-muted-foreground">{i+1}</td>
-                    <td className="py-2 text-foreground">{s.date}</td>
-                    <td className="py-2 text-foreground">{s.time}</td>
+                    <td className="py-3 text-muted-foreground">{i+1}</td>
+                    <td className="py-3 text-foreground">{s.date}</td>
+                    <td className="py-3 text-foreground">{s.time}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
-            {previewSchedule.length > 10 && <p className="text-xs text-muted-foreground mt-2">+{previewSchedule.length-10} daha...</p>}
+            {previewSchedule.length > 10 && <p className="text-xs text-muted-foreground mt-3">+{previewSchedule.length-10} daha...</p>}
           </div>
         </div>
       )}
