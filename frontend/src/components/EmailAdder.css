@@ -154,15 +154,17 @@
 
 .lang-btn-wrapper {
   display: inline-flex;
-  align-items: center;
+  align-items: stretch;
+  border: 1px solid var(--primary);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
 }
 
 .ai-btn-lang {
   background: var(--card);
   color: var(--primary);
-  border-color: var(--primary);
-  border-right: none;
-  border-radius: var(--radius-sm) 0 0 var(--radius-sm);
+  border: none;
+  border-radius: 0;
   padding: 7px 10px;
 }
 
@@ -173,14 +175,12 @@
 .lang-btn-delete {
   background: var(--card);
   color: var(--muted);
-  border: 1px solid var(--primary);
-  border-left: none;
-  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  border: none;
+  border-left: 1px solid var(--primary);
   padding: 0 9px;
   cursor: pointer;
-  font-size: 18px;
+  font-size: 16px;
   line-height: 1;
-  align-self: stretch;
   display: flex;
   align-items: center;
 }
@@ -188,7 +188,6 @@
 .lang-btn-delete:hover {
   background: var(--danger-bg);
   color: var(--danger-text);
-  border-color: var(--danger-border);
 }
 
 .lang-select {
@@ -520,6 +519,10 @@
   color: var(--text);
   cursor: pointer;
   margin-top: 10px;
+  margin-bottom: 0;
+  text-transform: none;
+  letter-spacing: normal;
+  font-weight: 500;
 }
 
 .business-hours-checkbox input[type="checkbox"] {
