@@ -23,8 +23,8 @@ jobs:
       - name: Verify source files
         run: |
           echo "Commit: ${{ github.sha }}"
-          grep -c "formatDate" frontend/src/components/EmailManager.js && echo "✅ formatDate VAR" || echo "❌ formatDate YOK"
-          grep -c "sendOverdue" frontend/src/components/EmailManager.js && echo "✅ sendOverdue VAR" || echo "❌ sendOverdue YOK"
+          ls frontend/app/page.tsx && echo "✅ Next.js page.tsx VAR" || echo "❌ page.tsx YOK"
+          ls frontend/components/MailboxManager.tsx && echo "✅ MailboxManager VAR" || echo "❌ MailboxManager YOK"
 
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v3
@@ -40,12 +40,12 @@ jobs:
           push: true
           tags: ghcr.io/kuzeysemiz/mail-app-api:latest
 
-      - name: Build React app
+      - name: Build Next.js app
         run: |
           cd frontend
           npm ci
-          CI=false REACT_APP_API_URL=/api npm run build
-          grep -rl "formatDate" build/ && echo "✅ formatDate build'de VAR" || echo "❌ formatDate build'de YOK"
+          NEXT_PUBLIC_API_URL=/api npm run build
+          ls out/index.html && echo "✅ Next.js build başarılı" || echo "❌ Build çıktısı yok"
 
       - name: Build and push Web image
         uses: docker/build-push-action@v5
