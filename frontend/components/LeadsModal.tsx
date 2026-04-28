@@ -218,18 +218,18 @@ export default function LeadsModal({ onClose, onSelect }: Props) {
             <button
               onClick={handleAutoTag}
               disabled={tagging}
-              className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-violet-600 to-purple-600 text-white rounded-lg text-xs font-semibold hover:opacity-90 disabled:opacity-60 transition-opacity"
+              className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-violet-600 to-purple-600 text-white rounded-lg text-xs font-semibold hover:opacity-90 disabled:opacity-60 transition-opacity"
             >
               {tagging ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={13} />}
               {tagging ? "Etiketleniyor..." : "AI ile Etiketle"}
             </button>
             <button
               onClick={() => setShowImport(v => !v)}
-              className="flex items-center gap-2 px-3 py-2 bg-secondary border border-border rounded-lg text-xs font-medium hover:bg-muted transition-colors"
+              className="flex items-center gap-2 px-4 py-2.5 bg-secondary border border-border rounded-lg text-xs font-medium hover:bg-muted transition-colors"
             >
               <Download size={13} />Hunter.io
             </button>
-            <button onClick={onClose} className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors">
+            <button onClick={onClose} className="p-2.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors">
               <X size={18} />
             </button>
           </div>
@@ -441,11 +441,11 @@ export default function LeadsModal({ onClose, onSelect }: Props) {
             {selected.size > 0 ? `${selected.size} kişi seçildi` : "Kişi seçilmedi"}
           </span>
           <div className="flex gap-3">
-            <button onClick={onClose} className="px-4 py-2.5 bg-secondary border border-border text-foreground rounded-lg text-sm font-medium hover:bg-muted transition-colors">
+            <button onClick={onClose} className="px-5 py-3 bg-secondary border border-border text-foreground rounded-lg text-sm font-medium hover:bg-muted transition-colors">
               İptal
             </button>
             <button onClick={handleSelect} disabled={selected.size === 0}
-              className="flex items-center gap-2 px-5 py-2.5 bg-primary text-[oklch(0.11_0.005_260)] rounded-lg text-sm font-semibold hover:opacity-90 disabled:opacity-40 transition-opacity">
+              className="flex items-center gap-2 px-6 py-3 bg-primary text-[oklch(0.11_0.005_260)] rounded-lg text-sm font-semibold hover:opacity-90 disabled:opacity-40 transition-opacity">
               <Check size={15} />Seçilenleri Ekle
             </button>
           </div>
