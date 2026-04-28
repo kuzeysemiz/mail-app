@@ -111,19 +111,18 @@ router.post('/import', async (req, res) => {
   });
 
   try {
-    const first = await fetchPage(0);
-    if (first.errors) {
-      return res.status(400).json({ error: first.errors[0]?.details || 'Hunter.io API hatası' });
-    }
-
-    const total = first.data?.meta?.total || 0;
-    const allLeads = [...(first.data?.leads || [])];
-
-    // Tüm sayfaları çek (100'er adet, sınır yok)
-    const pages = Math.ceil(total / limit);
-    for (let p = 1; p < pages; p++) {
-      const page = await fetchPage(p * limit);
-      allLeads.push(...(page.data?.leads || []));
+    // meta.total'a güvenmek yerine sayfa boşalana kadar döngü
+    const allLeads = [];
+    let offset = 0;
+    while (true) {
+      const page = await fetchPage(offset);
+      if (page.errors) {
+        return res.status(400).json({ error: page.errors[0]?.details || 'Hunter.io API hatası' });
+      }
+      const batch = page.data?.leads || [];
+      allLeads.push(...batch);
+      if (batch.length < limit) break; // son sayfa
+      offset += limit;
     }
 
     // DB'ye kaydet — INSERT OR IGNORE ile mevcut emailler atlanır
