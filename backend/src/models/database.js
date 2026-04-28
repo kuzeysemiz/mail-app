@@ -78,8 +78,9 @@ db.serialize(() => {
       createdAt DATETIME DEFAULT (datetime('now'))
     )
   `);
-  // Mevcut tabloya deviceId kolonu ekle (varsa hata vermez)
+  // Mevcut tabloya eksik kolonları ekle (varsa hata vermez)
   db.run(`ALTER TABLE otp_codes ADD COLUMN deviceId TEXT`, () => {});
+  db.run(`ALTER TABLE otp_codes ADD COLUMN ipAddress TEXT`, () => {});
 
   // Cihaz oturumları tablosu
   db.run(`
