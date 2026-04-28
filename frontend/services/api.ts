@@ -96,4 +96,13 @@ export const settingsAPI = {
   set: (key: string, value: unknown) => api.post("/settings", { key, value }),
 };
 
+export const leadsAPI = {
+  getCompanies: (q?: string) => api.get("/leads/companies", { params: q ? { q } : {} }),
+  getTitles: (company: string) => api.get("/leads/titles", { params: { company } }),
+  getLeads: (params: { company?: string; title?: string; q?: string }) =>
+    api.get("/leads", { params }),
+  getStats: () => api.get("/leads/stats"),
+  import: (apiKey: string) => api.post("/leads/import", { apiKey }),
+};
+
 export default api;

@@ -14,6 +14,7 @@ const logRoutes     = require('./routes/logRoutes');
 const draftRoutes   = require('./routes/draftRoutes');
 const settingsRoutes = require('./routes/settingsRoutes');
 const aiRoutes      = require('./routes/aiRoutes');
+const leadsRoutes   = require('./routes/leadsRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 10001;
@@ -38,6 +39,7 @@ app.use('/api/logs',      requireAuth, logRoutes);
 app.use('/api/drafts',    requireAuth, draftRoutes);
 app.use('/api/settings',  requireAuth, settingsRoutes);
 app.use('/api/ai',        requireAuth, aiRoutes);
+app.use('/api/leads',     requireAuth, leadsRoutes);
 
 // Error handling
 app.use((err, req, res, next) => {

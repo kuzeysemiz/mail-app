@@ -96,6 +96,22 @@ db.serialize(() => {
     )
   `);
 
+  // Leads (kişi rehberi) tablosu
+  db.run(`
+    CREATE TABLE IF NOT EXISTS leads (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      company TEXT,
+      domain TEXT,
+      firstName TEXT,
+      lastName TEXT,
+      email TEXT UNIQUE NOT NULL,
+      title TEXT,
+      confidence INTEGER,
+      source TEXT DEFAULT 'hunter',
+      createdAt DATETIME DEFAULT (datetime('now'))
+    )
+  `);
+
   // Taslak maillar tablosu
   db.run(`
     CREATE TABLE IF NOT EXISTS drafts (

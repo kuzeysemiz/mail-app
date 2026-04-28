@@ -1,9 +1,10 @@
 "use client";
 import { useState, useEffect, useRef, useCallback } from "react";
 import dynamic from "next/dynamic";
-import { Sparkles, Settings2, Languages, BookOpen, Plus, FileText, Trash2, Edit2, ChevronDown, ChevronUp, Calendar, Clock, Zap, Send } from "lucide-react";
+import { Sparkles, Settings2, Languages, BookOpen, Plus, FileText, Trash2, Edit2, ChevronDown, ChevronUp, Calendar, Clock, Zap, Send, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { mailboxAPI, emailAPI, draftAPI, savedEmailsAPI, aiAPI, settingsAPI } from "@/services/api";
+const LeadsModal = dynamic(() => import("./LeadsModal"), { ssr: false });
 
 const ReactQuill = dynamic(() => import("react-quill-new"), { ssr: false, loading: () => <div className="h-40 bg-input border border-border rounded-lg animate-pulse" /> });
 
@@ -55,6 +56,7 @@ export default function EmailAdder() {
   const [newRuleText, setNewRuleText]     = useState("");
   const [langButtons, setLangButtons]     = useState<LangBtn[]>([]);
   const [showDrafts, setShowDrafts]       = useState(false);
+  const [showLeadsModal, setShowLeadsModal] = useState(false);
   const rulesPanelRef                     = useRef<HTMLDivElement>(null);
   const textareaRef                       = useRef<HTMLTextAreaElement>(null);
 
@@ -225,7 +227,13 @@ export default function EmailAdder() {
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Mail Adresleri (Her satıra bir)</label>
+            <div className="flex items-center justify-between mb-3">
+              <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider">Mail Adresleri (Her satıra bir)</label>
+              <button type="button" onClick={() => setShowLeadsModal(true)}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-secondary border border-border text-foreground rounded-lg text-xs font-medium hover:bg-muted transition-colors">
+                <Users size={12} />Kişi Listesinden Seç
+              </button>
+            </div>
             <div className="relative">
               <textarea
                 ref={textareaRef}
@@ -431,6 +439,17 @@ export default function EmailAdder() {
             ))}
           </div>
         </div>
+      )}
+
+      {showLeadsModal && (
+        <LeadsModal
+          onClose={() => setShowLeadsModal(false)}
+          onSelect={(emails) => {
+            const existing = recipients.split("\n").map(e => e.trim()).filter(Boolean);
+            const merged = [...new Set([...existing, ...emails])];
+            setRecipients(merged.join("\n"));
+          }}
+        />
       )}
 
       {/* Schedule preview */}
