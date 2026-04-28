@@ -6,7 +6,6 @@ import { cn } from "@/lib/utils";
 import { mailboxAPI, emailAPI, settingsAPI } from "@/services/api";
 
 const ReactQuill = dynamic(() => import("react-quill"), { ssr: false });
-import "react-quill/dist/quill.snow.css";
 
 const QUILL_MODULES = { toolbar: [["bold","italic","underline"],["link"],["clean"]] };
 const QUILL_FORMATS = ["bold","italic","underline","link"];
