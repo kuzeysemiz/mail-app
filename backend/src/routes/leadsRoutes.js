@@ -49,15 +49,54 @@ router.get('/', (req, res) => {
   });
 });
 
+// API key kaydet
+router.post('/apikey', (req, res) => {
+  const { apiKey } = req.body;
+  if (!apiKey || !apiKey.trim()) return res.status(400).json({ error: 'API anahtarı boş olamaz' });
+  db.run(
+    `INSERT OR REPLACE INTO settings (key, value) VALUES ('hunter_api_key', ?)`,
+    [apiKey.trim()],
+    (err) => {
+      if (err) return res.status(500).json({ error: 'Kaydedilemedi' });
+      res.json({ success: true });
+    }
+  );
+});
+
+// API key durumunu getir (maskelenmiş)
+router.get('/apikey', (req, res) => {
+  db.get(`SELECT value FROM settings WHERE key = 'hunter_api_key'`, (err, row) => {
+    if (err || !row) return res.json({ saved: false });
+    const v = row.value;
+    const masked = v.slice(0, 4) + '*'.repeat(Math.max(4, v.length - 8)) + v.slice(-4);
+    res.json({ saved: true, masked });
+  });
+});
+
+// API key sil
+router.delete('/apikey', (req, res) => {
+  db.run(`DELETE FROM settings WHERE key = 'hunter_api_key'`, (err) => {
+    if (err) return res.status(500).json({ error: 'Silinemedi' });
+    res.json({ success: true });
+  });
+});
+
 // Hunter.io'dan import et
 router.post('/import', async (req, res) => {
-  const { apiKey } = req.body;
-  if (!apiKey) return res.status(400).json({ error: 'Hunter.io API anahtarı gerekli' });
+  // Önce kaydedilmiş key'i dene, yoksa body'den al
+  const getKey = () => new Promise((resolve) => {
+    db.get(`SELECT value FROM settings WHERE key = 'hunter_api_key'`, (err, row) => {
+      resolve(row?.value || req.body?.apiKey || null);
+    });
+  });
 
-  let offset = 0;
+  const apiKey = await getKey();
+  if (!apiKey) return res.status(400).json({ error: 'Hunter.io API anahtarı bulunamadı' });
+
   const limit = 100;
   let totalImported = 0;
-  let totalSkipped = 0;
+  let totalDuplicate = 0;
+  let totalNoEmail = 0;
 
   const fetchPage = (offset) => new Promise((resolve, reject) => {
     const url = `https://api.hunter.io/v2/leads?api_key=${encodeURIComponent(apiKey)}&limit=${limit}&offset=${offset}`;
@@ -72,7 +111,6 @@ router.post('/import', async (req, res) => {
   });
 
   try {
-    // İlk sayfayı çek, toplam sayıyı öğren
     const first = await fetchPage(0);
     if (first.errors) {
       return res.status(400).json({ error: first.errors[0]?.details || 'Hunter.io API hatası' });
@@ -81,14 +119,14 @@ router.post('/import', async (req, res) => {
     const total = first.data?.meta?.total || 0;
     const allLeads = [...(first.data?.leads || [])];
 
-    // Kalan sayfaları çek
+    // Tüm sayfaları çek (100'er adet, sınır yok)
     const pages = Math.ceil(total / limit);
     for (let p = 1; p < pages; p++) {
       const page = await fetchPage(p * limit);
       allLeads.push(...(page.data?.leads || []));
     }
 
-    // DB'ye kaydet
+    // DB'ye kaydet — INSERT OR IGNORE ile mevcut emailler atlanır
     await new Promise((resolve) => {
       db.serialize(() => {
         const stmt = db.prepare(
@@ -96,7 +134,7 @@ router.post('/import', async (req, res) => {
            VALUES (?, ?, ?, ?, ?, ?, ?, 'hunter')`
         );
         allLeads.forEach(lead => {
-          if (!lead.email) { totalSkipped++; return; }
+          if (!lead.email) { totalNoEmail++; return; }
           stmt.run(
             lead.company || null,
             lead.domain || null,
@@ -106,7 +144,7 @@ router.post('/import', async (req, res) => {
             lead.position || null,
             lead.confidence || null,
             function(err) {
-              if (err || this.changes === 0) totalSkipped++;
+              if (err || this.changes === 0) totalDuplicate++;
               else totalImported++;
             }
           );
@@ -115,7 +153,7 @@ router.post('/import', async (req, res) => {
       });
     });
 
-    res.json({ success: true, totalImported, totalSkipped, totalFetched: allLeads.length });
+    res.json({ success: true, totalImported, totalDuplicate, totalNoEmail, totalFetched: allLeads.length });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

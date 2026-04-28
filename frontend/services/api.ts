@@ -102,7 +102,10 @@ export const leadsAPI = {
   getLeads: (params: { company?: string; title?: string; q?: string }) =>
     api.get("/leads", { params }),
   getStats: () => api.get("/leads/stats"),
-  import: (apiKey: string) => api.post("/leads/import", { apiKey }),
+  import: () => api.post("/leads/import"),
+  getApiKey: () => api.get("/leads/apikey"),
+  saveApiKey: (apiKey: string) => api.post("/leads/apikey", { apiKey }),
+  deleteApiKey: () => api.delete("/leads/apikey"),
 };
 
 export default api;

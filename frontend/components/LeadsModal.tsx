@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
-import { X, Search, Building2, ChevronRight, Users, Download, Check, Loader2, AlertCircle } from "lucide-react";
+import { X, Search, Building2, ChevronRight, Users, Download, Check, Loader2, AlertCircle, Trash2, Key } from "lucide-react";
 import { leadsAPI } from "@/services/api";
 
 interface Lead {
@@ -26,25 +26,28 @@ interface Props {
 }
 
 export default function LeadsModal({ onClose, onSelect }: Props) {
-  const [companies, setCompanies]         = useState<Company[]>([]);
-  const [leads, setLeads]                 = useState<Lead[]>([]);
-  const [titles, setTitles]               = useState<string[]>([]);
+  const [companies, setCompanies]           = useState<Company[]>([]);
+  const [leads, setLeads]                   = useState<Lead[]>([]);
+  const [titles, setTitles]                 = useState<string[]>([]);
   const [selectedCompany, setSelectedCompany] = useState<string | null>(null);
-  const [selectedTitle, setSelectedTitle] = useState<string>("");
-  const [companySearch, setCompanySearch] = useState("");
-  const [leadSearch, setLeadSearch]       = useState("");
-  const [selected, setSelected]           = useState<Set<number>>(new Set());
-  const [loading, setLoading]             = useState(false);
-  const [importing, setImporting]         = useState(false);
-  const [importMsg, setImportMsg]         = useState<{ text: string; type: "success" | "error" } | null>(null);
-  const [showImport, setShowImport]       = useState(false);
-  const [apiKey, setApiKey]               = useState("");
-  const [stats, setStats]                 = useState<{ total: number; companies: number } | null>(null);
+  const [selectedTitle, setSelectedTitle]   = useState<string>("");
+  const [companySearch, setCompanySearch]   = useState("");
+  const [leadSearch, setLeadSearch]         = useState("");
+  const [selected, setSelected]             = useState<Set<number>>(new Set());
+  const [loading, setLoading]               = useState(false);
+  const [importing, setImporting]           = useState(false);
+  const [importMsg, setImportMsg]           = useState<{ text: string; type: "success" | "error" } | null>(null);
+  const [showImport, setShowImport]         = useState(false);
+  const [apiKeyInput, setApiKeyInput]       = useState("");
+  const [savedKey, setSavedKey]             = useState<{ saved: boolean; masked?: string }>({ saved: false });
+  const [savingKey, setSavingKey]           = useState(false);
+  const [stats, setStats]                   = useState<{ total: number; companies: number } | null>(null);
   const searchTimer = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     loadCompanies();
     leadsAPI.getStats().then(r => setStats(r.data)).catch(() => {});
+    leadsAPI.getApiKey().then(r => setSavedKey(r.data)).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -82,6 +85,42 @@ export default function LeadsModal({ onClose, onSelect }: Props) {
     setLoading(false);
   };
 
+  const handleSaveKey = async () => {
+    if (!apiKeyInput.trim()) return;
+    setSavingKey(true);
+    try {
+      await leadsAPI.saveApiKey(apiKeyInput.trim());
+      const r = await leadsAPI.getApiKey();
+      setSavedKey(r.data);
+      setApiKeyInput("");
+    } catch {}
+    setSavingKey(false);
+  };
+
+  const handleDeleteKey = async () => {
+    try {
+      await leadsAPI.deleteApiKey();
+      setSavedKey({ saved: false });
+    } catch {}
+  };
+
+  const handleImport = async () => {
+    setImporting(true);
+    setImportMsg(null);
+    try {
+      const r = await leadsAPI.import();
+      const { totalImported, totalDuplicate, totalFetched } = r.data;
+      const parts = [`${totalImported} yeni kişi içe aktarıldı`];
+      if (totalDuplicate > 0) parts.push(`${totalDuplicate} zaten mevcut`);
+      setImportMsg({ text: `${totalFetched} lead çekildi — ${parts.join(", ")}`, type: "success" });
+      loadCompanies();
+      leadsAPI.getStats().then(r => setStats(r.data)).catch(() => {});
+    } catch (err: any) {
+      setImportMsg({ text: err.response?.data?.error || "İçe aktarma başarısız", type: "error" });
+    }
+    setImporting(false);
+  };
+
   const toggleLead = (id: number) => {
     setSelected(prev => {
       const next = new Set(prev);
@@ -91,11 +130,8 @@ export default function LeadsModal({ onClose, onSelect }: Props) {
   };
 
   const toggleAll = () => {
-    if (selected.size === leads.length) {
-      setSelected(new Set());
-    } else {
-      setSelected(new Set(leads.map(l => l.id)));
-    }
+    if (selected.size === leads.length) setSelected(new Set());
+    else setSelected(new Set(leads.map(l => l.id)));
   };
 
   const handleSelect = () => {
@@ -104,25 +140,10 @@ export default function LeadsModal({ onClose, onSelect }: Props) {
     onClose();
   };
 
-  const handleImport = async () => {
-    if (!apiKey.trim()) return;
-    setImporting(true);
-    setImportMsg(null);
-    try {
-      const r = await leadsAPI.import(apiKey.trim());
-      setImportMsg({ text: `${r.data.totalImported} yeni kişi içe aktarıldı (${r.data.totalSkipped} atlandı)`, type: "success" });
-      setApiKey("");
-      loadCompanies();
-      leadsAPI.getStats().then(r => setStats(r.data)).catch(() => {});
-    } catch (err: any) {
-      setImportMsg({ text: err.response?.data?.error || "İçe aktarma başarısız", type: "error" });
-    }
-    setImporting(false);
-  };
-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "rgba(0,0,0,0.6)" }}>
       <div className="bg-card border border-border rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col">
+
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-5 border-b border-border">
           <div className="flex items-center gap-3">
@@ -130,9 +151,7 @@ export default function LeadsModal({ onClose, onSelect }: Props) {
             <div>
               <h2 className="font-semibold text-foreground">Kişi Listesinden Seç</h2>
               {stats && (
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  {stats.total} kişi · {stats.companies} şirket
-                </p>
+                <p className="text-xs text-muted-foreground mt-0.5">{stats.total} kişi · {stats.companies} şirket</p>
               )}
             </div>
           </div>
@@ -151,31 +170,61 @@ export default function LeadsModal({ onClose, onSelect }: Props) {
 
         {/* Import panel */}
         {showImport && (
-          <div className="px-6 py-4 bg-secondary border-b border-border">
-            <p className="text-xs text-muted-foreground mb-3">
+          <div className="px-6 py-4 bg-secondary border-b border-border space-y-3">
+            <p className="text-xs text-muted-foreground">
               Hunter.io hesabınızdaki kayıtlı leadleri veritabanına aktarın. API anahtarınızı{" "}
-              <a href="https://hunter.io/api-keys" target="_blank" rel="noopener noreferrer" className="text-primary underline underline-offset-2">hunter.io/api-keys</a>
-              {" "}adresinden alabilirsiniz.
+              <a href="https://hunter.io/api-keys" target="_blank" rel="noopener noreferrer" className="text-primary underline underline-offset-2">
+                hunter.io/api-keys
+              </a>{" "}adresinden alabilirsiniz.
             </p>
-            <div className="flex gap-3">
-              <input
-                type="password"
-                value={apiKey}
-                onChange={e => setApiKey(e.target.value)}
-                placeholder="Hunter.io API Anahtarı"
-                className="flex-1 px-4 py-2.5 bg-input border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
-              />
-              <button
-                onClick={handleImport}
-                disabled={importing || !apiKey.trim()}
-                className="flex items-center gap-2 px-4 py-2.5 bg-primary text-[oklch(0.11_0.005_260)] rounded-lg text-sm font-semibold hover:opacity-90 disabled:opacity-50"
-              >
-                {importing ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
-                {importing ? "Aktarılıyor..." : "Aktar"}
-              </button>
-            </div>
+
+            {/* Kayıtlı key göster ya da giriş alanı */}
+            {savedKey.saved ? (
+              <div className="flex items-center gap-3">
+                <div className="flex-1 flex items-center gap-2 px-4 py-2.5 bg-input border border-border rounded-lg">
+                  <Key size={13} className="text-primary shrink-0" />
+                  <span className="text-sm text-foreground font-mono">{savedKey.masked}</span>
+                  <span className="text-xs text-primary bg-primary/10 px-2 py-0.5 rounded-full ml-auto">Kayıtlı</span>
+                </div>
+                <button
+                  onClick={handleDeleteKey}
+                  className="p-2.5 bg-input border border-border rounded-lg text-muted-foreground hover:text-destructive hover:border-destructive/40 transition-colors"
+                  title="API key'i sil"
+                >
+                  <Trash2 size={14} />
+                </button>
+                <button
+                  onClick={handleImport}
+                  disabled={importing}
+                  className="flex items-center gap-2 px-4 py-2.5 bg-primary text-[oklch(0.11_0.005_260)] rounded-lg text-sm font-semibold hover:opacity-90 disabled:opacity-50"
+                >
+                  {importing ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
+                  {importing ? "Aktarılıyor..." : "İçe Aktar"}
+                </button>
+              </div>
+            ) : (
+              <div className="flex gap-3">
+                <input
+                  type="password"
+                  value={apiKeyInput}
+                  onChange={e => setApiKeyInput(e.target.value)}
+                  onKeyDown={e => e.key === "Enter" && handleSaveKey()}
+                  placeholder="Hunter.io API Anahtarı"
+                  className="flex-1 px-4 py-2.5 bg-input border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                />
+                <button
+                  onClick={handleSaveKey}
+                  disabled={savingKey || !apiKeyInput.trim()}
+                  className="flex items-center gap-2 px-4 py-2.5 bg-secondary border border-border text-foreground rounded-lg text-sm font-medium hover:bg-muted disabled:opacity-50"
+                >
+                  {savingKey ? <Loader2 size={14} className="animate-spin" /> : <Key size={14} />}
+                  Kaydet
+                </button>
+              </div>
+            )}
+
             {importMsg && (
-              <div className={`mt-3 flex items-center gap-2 text-xs px-3 py-2 rounded-lg ${importMsg.type === "success" ? "bg-primary/10 text-primary" : "bg-destructive/10 text-destructive"}`}>
+              <div className={`flex items-center gap-2 text-xs px-3 py-2 rounded-lg ${importMsg.type === "success" ? "bg-primary/10 text-primary" : "bg-destructive/10 text-destructive"}`}>
                 {importMsg.type === "success" ? <Check size={13} /> : <AlertCircle size={13} />}
                 {importMsg.text}
               </div>
@@ -329,8 +378,7 @@ export default function LeadsModal({ onClose, onSelect }: Props) {
               disabled={selected.size === 0}
               className="flex items-center gap-2 px-5 py-2.5 bg-primary text-[oklch(0.11_0.005_260)] rounded-lg text-sm font-semibold hover:opacity-90 disabled:opacity-40 transition-opacity"
             >
-              <Check size={15} />
-              Seçilenleri Ekle
+              <Check size={15} />Seçilenleri Ekle
             </button>
           </div>
         </div>
