@@ -329,7 +329,7 @@ export default function LeadsModal({ onClose, onSelect }: Props) {
               <div className="px-4 py-3 border-b border-border flex flex-wrap gap-1.5">
                 <button
                   onClick={() => setActiveTag("")}
-                  className={`text-[11px] px-2.5 py-1 rounded-full border font-medium transition-colors ${activeTag === "" ? "bg-primary/20 text-primary border-primary/40" : "bg-secondary text-muted-foreground border-border hover:text-foreground"}`}
+                  className={`text-[11px] px-3 py-1.5 rounded-full border font-medium transition-colors ${activeTag === "" ? "bg-primary/20 text-primary border-primary/40" : "bg-secondary text-muted-foreground border-border hover:text-foreground"}`}
                 >
                   Tümü
                 </button>
@@ -340,7 +340,7 @@ export default function LeadsModal({ onClose, onSelect }: Props) {
                     <button
                       key={t.tag}
                       onClick={() => setActiveTag(isActive ? "" : t.tag)}
-                      className={`text-[11px] px-2.5 py-1 rounded-full border font-medium transition-all ${isActive ? `${c.bg} ${c.text} ${c.border} ring-1 ring-offset-0` : `bg-secondary text-muted-foreground border-border hover:${c.bg} hover:${c.text}`}`}
+                      className={`text-[11px] px-3 py-1.5 rounded-full border font-medium transition-all ${isActive ? `${c.bg} ${c.text} ${c.border} ring-1 ring-offset-0` : `bg-secondary text-muted-foreground border-border hover:${c.bg} hover:${c.text}`}`}
                     >
                       {t.tag}
                     </button>
