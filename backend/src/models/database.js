@@ -74,9 +74,12 @@ db.serialize(() => {
       code TEXT NOT NULL,
       expiresAt DATETIME NOT NULL,
       used INTEGER DEFAULT 0,
+      deviceId TEXT,
       createdAt DATETIME DEFAULT (datetime('now'))
     )
   `);
+  // Mevcut tabloya deviceId kolonu ekle (varsa hata vermez)
+  db.run(`ALTER TABLE otp_codes ADD COLUMN deviceId TEXT`, () => {});
 
   // Cihaz oturumları tablosu
   db.run(`

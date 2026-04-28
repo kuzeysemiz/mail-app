@@ -12,7 +12,7 @@ function getDeviceId(): string {
   return id;
 }
 
-function getDeviceName(): string {
+function getDeviceInfo() {
   const ua = navigator.userAgent;
   let browser = "Browser";
   let os = "Unknown";
@@ -25,7 +25,20 @@ function getDeviceName(): string {
   else if (ua.includes("Linux")) os = "Linux";
   else if (ua.includes("Android")) os = "Android";
   else if (ua.includes("iPhone") || ua.includes("iPad")) os = "iOS";
-  return `${browser} / ${os}`;
+
+  return {
+    browser,
+    os,
+    platform: navigator.platform || "—",
+    screen: `${window.screen.width}×${window.screen.height} (derinlik: ${window.screen.colorDepth}bit)`,
+    language: navigator.language || "—",
+    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || "—",
+    userAgent: ua,
+  };
+}
+
+function getDeviceName(info: ReturnType<typeof getDeviceInfo>): string {
+  return `${info.browser} / ${info.os}`;
 }
 
 interface Props {
@@ -61,7 +74,9 @@ export default function LoginScreen({ onLogin }: Props) {
     setLoading(true);
     setError("");
     try {
-      const r = await authAPI.requestCode();
+      const deviceId   = getDeviceId();
+      const deviceInfo = getDeviceInfo();
+      const r = await authAPI.requestCode(deviceId, deviceInfo);
       setMaskedEmail(r.data.email);
       setStep("verify");
       startCountdown();
@@ -107,7 +122,8 @@ export default function LoginScreen({ onLogin }: Props) {
     setError("");
     try {
       const deviceId   = getDeviceId();
-      const deviceName = getDeviceName();
+      const deviceInfo = getDeviceInfo();
+      const deviceName = getDeviceName(deviceInfo);
       const r = await authAPI.verifyCode(finalCode, deviceId, deviceName);
       localStorage.setItem("authToken", r.data.token);
       localStorage.setItem("authExpiry", r.data.expiresAt);

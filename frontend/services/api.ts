@@ -30,7 +30,8 @@ api.interceptors.response.use(
 );
 
 export const authAPI = {
-  requestCode: () => api.post("/auth/request-code"),
+  requestCode: (deviceId: string, deviceInfo: object) =>
+    api.post("/auth/request-code", { deviceId, deviceInfo }),
   verifyCode: (code: string, deviceId: string, deviceName: string) =>
     api.post("/auth/verify-code", { code, deviceId, deviceName }),
   me: () => api.get("/auth/me"),

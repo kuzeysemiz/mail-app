@@ -11,50 +11,103 @@ function generateOTP() {
 }
 
 // POST /api/auth/request-code
-// Kayıtlı ilk mailbox'a 6 haneli OTP gönderir
 router.post('/request-code', (req, res) => {
-  db.get('SELECT email, appPassword FROM mailboxes LIMIT 1', async (err, mailbox) => {
-    if (err || !mailbox) {
-      return res.status(400).json({ error: 'Kayıtlı Gmail hesabı bulunamadı. Önce hesap ekleyin.' });
+  const { deviceId, deviceInfo } = req.body;
+
+  if (!deviceId) {
+    return res.status(400).json({ error: 'Cihaz ID gerekli' });
+  }
+
+  // Aynı cihaz 2 dakika içinde tekrar kod isteyemez (sunucu tarafı kontrol)
+  const twoMinutesAgo = new Date(Date.now() - 2 * 60 * 1000).toISOString();
+  db.get(
+    `SELECT createdAt FROM otp_codes WHERE deviceId = ? AND used = 0 AND createdAt > ? ORDER BY createdAt DESC LIMIT 1`,
+    [deviceId, twoMinutesAgo],
+    (err, recent) => {
+      if (recent) {
+        const remaining = Math.ceil((new Date(recent.createdAt).getTime() + 2 * 60 * 1000 - Date.now()) / 1000);
+        return res.status(429).json({ error: `Bu cihazdan ${remaining} saniye sonra tekrar kod isteyebilirsiniz.`, remaining });
+      }
+
+      db.get('SELECT email, appPassword FROM mailboxes LIMIT 1', async (err, mailbox) => {
+        if (err || !mailbox) {
+          return res.status(400).json({ error: 'Kayıtlı Gmail hesabı bulunamadı. Önce hesap ekleyin.' });
+        }
+
+        // Bu cihazın eski kullanılmamış kodlarını geçersiz kıl
+        db.run('UPDATE otp_codes SET used = 1 WHERE deviceId = ? AND used = 0', [deviceId]);
+
+        const code = generateOTP();
+        const expiresAt = new Date(Date.now() + 2 * 60 * 1000).toISOString();
+        const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'Bilinmiyor';
+
+        db.run(
+          'INSERT INTO otp_codes (code, expiresAt, deviceId) VALUES (?, ?, ?)',
+          [code, expiresAt, deviceId],
+          async (err) => {
+            if (err) {
+              logger.error('OTP oluşturma hatası:', err);
+              return res.status(500).json({ error: 'Kod oluşturulamadı' });
+            }
+
+            // Cihaz bilgisi tablosu oluştur
+            const info = deviceInfo || {};
+            const deviceRows = [
+              ['Tarayıcı', info.browser || '—'],
+              ['İşletim Sistemi', info.os || '—'],
+              ['Platform', info.platform || '—'],
+              ['Ekran Çözünürlüğü', info.screen || '—'],
+              ['Dil', info.language || '—'],
+              ['Saat Dilimi', info.timezone || '—'],
+              ['Cihaz ID', deviceId],
+              ['IP Adresi', ip],
+              ['Zaman', new Date().toLocaleString('tr-TR', { timeZone: 'Europe/Istanbul' })],
+            ];
+
+            const deviceTable = `
+              <table style="width:100%;border-collapse:collapse;margin-top:8px;">
+                ${deviceRows.map(([k, v]) => `
+                  <tr>
+                    <td style="padding:6px 10px;font-size:12px;color:#6b7280;white-space:nowrap;border-bottom:1px solid #f3f4f6;">${k}</td>
+                    <td style="padding:6px 10px;font-size:12px;color:#111827;border-bottom:1px solid #f3f4f6;word-break:break-all;">${v}</td>
+                  </tr>`).join('')}
+              </table>`;
+
+            const mailService = new MailService(mailbox.email, mailbox.appPassword);
+            const result = await mailService.sendMail(
+              mailbox.email,
+              'Mail Sistemi - Giriş Kodu',
+              `<div style="font-family:sans-serif;max-width:480px;margin:40px auto;padding:32px;border:1px solid #e5e7eb;border-radius:12px;">
+                <h2 style="margin:0 0 8px;font-size:20px;color:#111827;">Giriş Kodunuz</h2>
+                <p style="color:#6b7280;margin:0 0 24px;font-size:14px;">Mail Sistemi paneline giriş için aşağıdaki kodu kullanın.</p>
+
+                <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:20px;text-align:center;margin-bottom:24px;">
+                  <span style="font-size:40px;font-weight:700;letter-spacing:12px;color:#111827;">${code}</span>
+                </div>
+
+                <p style="color:#ef4444;font-size:13px;margin:0 0 28px;">⏱ Bu kod 2 dakika geçerlidir.</p>
+
+                <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:16px;">
+                  <p style="margin:0 0 10px;font-size:13px;font-weight:600;color:#92400e;">⚠️ Bu isteği siz yapmadıysanız kodu kimseyle paylaşmayın.</p>
+                  <p style="margin:0 0 8px;font-size:12px;color:#78350f;">Kodu isteyen cihaz bilgileri:</p>
+                  ${deviceTable}
+                </div>
+              </div>`
+            );
+
+            if (!result.success) {
+              logger.error('OTP gönderme hatası:', result.error);
+              return res.status(500).json({ error: 'Kod gönderilemedi: ' + result.error });
+            }
+
+            const masked = mailbox.email.replace(/^(.{2})(.*)(@.*)$/, (_, a, b, c) => a + '*'.repeat(Math.max(1, b.length)) + c);
+            logger.info(`OTP gönderildi: ${mailbox.email} — cihaz: ${deviceId} — IP: ${ip}`);
+            res.json({ success: true, email: masked });
+          }
+        );
+      });
     }
-
-    // Mevcut kullanılmamış kodları geçersiz kıl
-    db.run('UPDATE otp_codes SET used = 1 WHERE used = 0');
-
-    const code = generateOTP();
-    const expiresAt = new Date(Date.now() + 2 * 60 * 1000).toISOString();
-
-    db.run('INSERT INTO otp_codes (code, expiresAt) VALUES (?, ?)', [code, expiresAt], async (err) => {
-      if (err) {
-        logger.error('OTP oluşturma hatası:', err);
-        return res.status(500).json({ error: 'Kod oluşturulamadı' });
-      }
-
-      const mailService = new MailService(mailbox.email, mailbox.appPassword);
-      const result = await mailService.sendMail(
-        mailbox.email,
-        'Mail Sistemi - Giriş Kodu',
-        `<div style="font-family:sans-serif;max-width:400px;margin:40px auto;padding:32px;border:1px solid #e5e7eb;border-radius:12px;">
-          <h2 style="margin:0 0 8px;font-size:20px;color:#111827;">Giriş Kodunuz</h2>
-          <p style="color:#6b7280;margin:0 0 24px;font-size:14px;">Mail Sistemi paneline giriş için aşağıdaki kodu kullanın.</p>
-          <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:20px;text-align:center;margin-bottom:24px;">
-            <span style="font-size:36px;font-weight:700;letter-spacing:10px;color:#111827;">${code}</span>
-          </div>
-          <p style="color:#ef4444;font-size:13px;margin:0;">⏱ Bu kod 2 dakika geçerlidir.</p>
-        </div>`
-      );
-
-      if (!result.success) {
-        logger.error('OTP gönderme hatası:', result.error);
-        return res.status(500).json({ error: 'Kod gönderilemedi: ' + result.error });
-      }
-
-      // Email adresini maskele: ab***@gmail.com
-      const masked = mailbox.email.replace(/^(.{2})(.*)(@.*)$/, (_, a, b, c) => a + '*'.repeat(Math.max(1, b.length)) + c);
-      logger.info(`OTP gönderildi: ${mailbox.email}`);
-      res.json({ success: true, email: masked });
-    });
-  });
+  );
 });
 
 // POST /api/auth/verify-code
@@ -76,7 +129,7 @@ router.post('/verify-code', (req, res) => {
       db.run('UPDATE otp_codes SET used = 1 WHERE id = ?', [otp.id]);
 
       const token = crypto.randomBytes(32).toString('hex');
-      const expiresAt = new Date(Date.now() + 60 * 60 * 1000).toISOString(); // 1 saat
+      const expiresAt = new Date(Date.now() + 60 * 60 * 1000).toISOString();
       const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || '';
 
       db.get('SELECT id FROM sessions WHERE deviceId = ?', [deviceId], (err, existing) => {
@@ -106,7 +159,7 @@ router.post('/verify-code', (req, res) => {
   );
 });
 
-// GET /api/auth/me — token geçerliliği kontrolü
+// GET /api/auth/me
 router.get('/me', requireAuth, (req, res) => {
   res.json({
     success: true,
@@ -119,7 +172,7 @@ router.get('/me', requireAuth, (req, res) => {
   });
 });
 
-// GET /api/auth/sessions — tüm aktif oturumlar
+// GET /api/auth/sessions
 router.get('/sessions', requireAuth, (req, res) => {
   db.all(
     `SELECT id, deviceId, deviceName, ipAddress, createdAt, expiresAt
@@ -131,7 +184,7 @@ router.get('/sessions', requireAuth, (req, res) => {
   );
 });
 
-// DELETE /api/auth/sessions/:id — oturumu sonlandır
+// DELETE /api/auth/sessions/:id
 router.delete('/sessions/:id', requireAuth, (req, res) => {
   db.run('UPDATE sessions SET isActive = 0 WHERE id = ?', [req.params.id], (err) => {
     if (err) return res.status(500).json({ error: err.message });
