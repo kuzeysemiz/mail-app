@@ -46,18 +46,34 @@ interface Props {
 }
 
 export default function LoginScreen({ onLogin }: Props) {
-  const [step, setStep]           = useState<"request" | "verify">("request");
-  const [code, setCode]           = useState(["", "", "", "", "", ""]);
+  const [step, setStep]               = useState<"request" | "verify">("request");
+  const [code, setCode]               = useState(["", "", "", "", "", ""]);
   const [maskedEmail, setMaskedEmail] = useState("");
-  const [countdown, setCountdown] = useState(0);
-  const [loading, setLoading]     = useState(false);
-  const [error, setError]         = useState("");
-  const inputRefs                 = useRef<(HTMLInputElement | null)[]>([]);
-  const timerRef                  = useRef<NodeJS.Timeout | null>(null);
+  const [countdown, setCountdown]     = useState(0);
+  const [rateLimitSec, setRateLimitSec] = useState(0);
+  const [loading, setLoading]         = useState(false);
+  const [error, setError]             = useState("");
+  const inputRefs                     = useRef<(HTMLInputElement | null)[]>([]);
+  const timerRef                      = useRef<NodeJS.Timeout | null>(null);
+  const rateLimitRef                  = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    return () => { if (timerRef.current) clearInterval(timerRef.current); };
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+      if (rateLimitRef.current) clearInterval(rateLimitRef.current);
+    };
   }, []);
+
+  const startRateLimit = (seconds: number) => {
+    setRateLimitSec(seconds);
+    if (rateLimitRef.current) clearInterval(rateLimitRef.current);
+    rateLimitRef.current = setInterval(() => {
+      setRateLimitSec(prev => {
+        if (prev <= 1) { clearInterval(rateLimitRef.current!); return 0; }
+        return prev - 1;
+      });
+    }, 1000);
+  };
 
   const startCountdown = () => {
     setCountdown(120);
@@ -82,7 +98,13 @@ export default function LoginScreen({ onLogin }: Props) {
       startCountdown();
       setTimeout(() => inputRefs.current[0]?.focus(), 100);
     } catch (err: any) {
-      setError(err.response?.data?.error || "Kod gönderilemedi. Tekrar deneyin.");
+      const remaining = err.response?.data?.remaining;
+      if (remaining) {
+        startRateLimit(remaining);
+        setError("");
+      } else {
+        setError(err.response?.data?.error || "Kod gönderilemedi. Tekrar deneyin.");
+      }
     }
     setLoading(false);
   };
@@ -170,13 +192,25 @@ export default function LoginScreen({ onLogin }: Props) {
                 </div>
               )}
 
+              {rateLimitSec > 0 && (
+                <div style={{ marginBottom: 16, padding: "12px 16px", background: "#fffbeb", border: "1px solid #fde68a", borderRadius: 8, display: "flex", alignItems: "center", gap: 10 }}>
+                  <Clock size={16} color="#d97706" style={{ flexShrink: 0 }} />
+                  <div>
+                    <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: "#92400e" }}>Lütfen bekleyin</p>
+                    <p style={{ margin: "2px 0 0", fontSize: 12, color: "#b45309" }}>
+                      Yeni kod için <strong>{fmt(rateLimitSec)}</strong> saniye kaldı
+                    </p>
+                  </div>
+                </div>
+              )}
+
               <button
                 onClick={handleRequestCode}
-                disabled={loading}
-                style={{ width: "100%", padding: "13px 0", background: loading ? "#9ca3af" : "#00c896", color: "#fff", border: "none", borderRadius: 10, fontSize: 15, fontWeight: 600, cursor: loading ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, transition: "background 0.15s" }}
+                disabled={loading || rateLimitSec > 0}
+                style={{ width: "100%", padding: "13px 0", background: (loading || rateLimitSec > 0) ? "#9ca3af" : "#00c896", color: "#fff", border: "none", borderRadius: 10, fontSize: 15, fontWeight: 600, cursor: (loading || rateLimitSec > 0) ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, transition: "background 0.15s" }}
               >
                 <Mail size={17} />
-                {loading ? "Gönderiliyor..." : "Kodu Al"}
+                {loading ? "Gönderiliyor..." : rateLimitSec > 0 ? `${fmt(rateLimitSec)} bekleyin` : "Kodu Al"}
               </button>
             </>
           ) : (
