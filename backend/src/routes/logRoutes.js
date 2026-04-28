@@ -100,21 +100,20 @@ router.get('/email/:emailId', (req, res) => {
 
 // Özet istatistikler
 router.get('/stats/summary', (req, res) => {
-  db.all(
-    `SELECT 
-       day,
-       COUNT(*) as total,
-       SUM(CASE WHEN status = 'success' THEN 1 ELSE 0 END) as successful,
-       SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END) as failed
+  db.get(
+    `SELECT
+       COUNT(*) as totalSent,
+       SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END) as totalFailed,
+       MAX(sentAt) as lastActivity
      FROM logs
-     GROUP BY day
-     ORDER BY day DESC
-     LIMIT 30`,
-    (err, rows) => {
-      if (err) {
-        return res.status(500).json({ error: 'Veritabanı hatası' });
-      }
-      res.json(rows);
+     WHERE status = 'success'`,
+    (err, row) => {
+      if (err) return res.status(500).json({ error: 'Veritabanı hatası' });
+      res.json({
+        totalSent:    row?.totalSent    || 0,
+        totalFailed:  row?.totalFailed  || 0,
+        lastActivity: row?.lastActivity || null,
+      });
     }
   );
 });

@@ -26,7 +26,8 @@ export default function MailboxManager() {
   const [showPw, setShowPw]           = useState(false);
   const [loading, setLoading]         = useState(false);
   const [msg, setMsg]                 = useState({ text: "", type: "" });
-  const [totalSent, setTotalSent]     = useState(0);
+  const [totalSent, setTotalSent]         = useState(0);
+  const [lastActivity, setLastActivity]   = useState<string | null>(null);
 
   useEffect(() => { load(); }, []);
 
@@ -34,7 +35,8 @@ export default function MailboxManager() {
     try {
       const [mbRes, sumRes] = await Promise.all([mailboxAPI.getAll(), logAPI.getSummary()]);
       setMailboxes(mbRes.data);
-      setTotalSent(sumRes.data?.totalSent ?? sumRes.data?.successful ?? 0);
+      setTotalSent(sumRes.data?.totalSent ?? 0);
+      setLastActivity(sumRes.data?.lastActivity ?? null);
     } catch {}
   };
 
@@ -76,7 +78,7 @@ export default function MailboxManager() {
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
         <StatCard icon={<Users size={24} />} value={mailboxes.length} label="Bağlı Hesap" />
         <StatCard icon={<Send size={24} />}  value={totalSent}         label="Gönderilen Mail" />
-        <StatCard icon={<Clock size={24} />} value="--"               label="Son Aktivite" />
+        <StatCard icon={<Clock size={24} />} value={lastActivity ? new Date(lastActivity).toLocaleDateString("tr-TR") : "--"} label="Son Aktivite" />
       </div>
 
       {/* Alert */}
