@@ -237,7 +237,7 @@ export default function LeadsModal({ onClose, onSelect }: Props) {
 
         {/* Tag message */}
         {tagMsg && (
-          <div className={`px-6 py-3 border-b border-border flex items-center gap-2 text-xs ${tagMsg.type === "success" ? "bg-primary/10 text-primary" : "bg-destructive/10 text-destructive"}`}>
+          <div className={`px-6 py-4 border-b border-border flex items-center gap-2 text-xs ${tagMsg.type === "success" ? "bg-primary/10 text-primary" : "bg-destructive/10 text-destructive"}`}>
             {tagMsg.type === "success" ? <Check size={13} /> : <AlertCircle size={13} />}
             {tagMsg.text}
           </div>
@@ -245,7 +245,7 @@ export default function LeadsModal({ onClose, onSelect }: Props) {
 
         {/* Import panel */}
         {showImport && (
-          <div className="px-6 py-4 bg-secondary border-b border-border space-y-3">
+          <div className="px-6 py-5 bg-secondary border-b border-border space-y-3">
             <p className="text-xs text-muted-foreground">
               Hunter.io API anahtarınızı{" "}
               <a href="https://hunter.io/api-keys" target="_blank" rel="noopener noreferrer" className="text-primary underline underline-offset-2">hunter.io/api-keys</a>
@@ -294,18 +294,18 @@ export default function LeadsModal({ onClose, onSelect }: Props) {
           {/* Left: Company list */}
           <div className="w-72 flex-shrink-0 border-r border-border flex flex-col">
             {/* Search */}
-            <div className="p-3 border-b border-border">
+            <div className="p-4 border-b border-border">
               <div className="relative">
-                <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                <Search size={13} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
                 <input type="text" value={companySearch} onChange={e => setCompanySearch(e.target.value)}
                   placeholder="Şirket ara..."
-                  className="w-full pl-8 pr-3 py-2 bg-input border border-border rounded-lg text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring" />
+                  className="w-full pl-9 pr-4 py-2.5 bg-input border border-border rounded-lg text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring" />
               </div>
             </div>
 
             {/* Tag filter chips */}
             {tags.length > 0 && (
-              <div className="px-3 py-2.5 border-b border-border flex flex-wrap gap-1.5">
+              <div className="px-4 py-3 border-b border-border flex flex-wrap gap-1.5">
                 <button
                   onClick={() => setActiveTag("")}
                   className={`text-[11px] px-2.5 py-1 rounded-full border font-medium transition-colors ${activeTag === "" ? "bg-primary/20 text-primary border-primary/40" : "bg-secondary text-muted-foreground border-border hover:text-foreground"}`}
@@ -375,22 +375,22 @@ export default function LeadsModal({ onClose, onSelect }: Props) {
             ) : (
               <>
                 {/* Filters */}
-                <div className="p-3 border-b border-border flex gap-2">
+                <div className="p-4 border-b border-border flex gap-2">
                   <div className="relative flex-1">
-                    <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                    <Search size={13} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
                     <input type="text" value={leadSearch} onChange={e => setLeadSearch(e.target.value)}
                       placeholder="İsim veya email ara..."
-                      className="w-full pl-8 pr-3 py-2 bg-input border border-border rounded-lg text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring" />
+                      className="w-full pl-9 pr-4 py-2.5 bg-input border border-border rounded-lg text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring" />
                   </div>
                   <select value={selectedTitle} onChange={e => setSelectedTitle(e.target.value)}
-                    className="px-3 py-2 bg-input border border-border rounded-lg text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring">
+                    className="px-4 py-2.5 bg-input border border-border rounded-lg text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring">
                     <option value="">Tüm Unvanlar</option>
                     {titles.map(t => <option key={t} value={t}>{t}</option>)}
                   </select>
                 </div>
 
                 {/* Table header */}
-                <div className="px-4 py-2.5 border-b border-border flex items-center gap-3 bg-secondary/50">
+                <div className="px-5 py-3 border-b border-border flex items-center gap-3 bg-secondary/50">
                   <input type="checkbox" checked={leads.length > 0 && selected.size === leads.length}
                     onChange={toggleAll} className="accent-primary w-3.5 h-3.5" />
                   <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
@@ -409,10 +409,10 @@ export default function LeadsModal({ onClose, onSelect }: Props) {
                   ) : (
                     leads.map(lead => (
                       <label key={lead.id}
-                        className={`flex items-center gap-3 px-4 py-3 border-b border-border/40 last:border-0 cursor-pointer transition-colors hover:bg-secondary ${selected.has(lead.id) ? "bg-primary/5" : ""}`}>
+                        className={`flex items-center gap-3 px-5 py-4 border-b border-border/40 last:border-0 cursor-pointer transition-colors hover:bg-secondary ${selected.has(lead.id) ? "bg-primary/5" : ""}`}>
                         <input type="checkbox" checked={selected.has(lead.id)} onChange={() => toggleLead(lead.id)}
                           className="accent-primary w-3.5 h-3.5 shrink-0" />
-                        <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center shrink-0 text-primary text-[11px] font-bold">
+                        <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0 text-primary text-[11px] font-bold">
                           {(lead.firstName?.[0] || lead.email[0]).toUpperCase()}
                         </div>
                         <div className="min-w-0 flex-1">
@@ -436,7 +436,7 @@ export default function LeadsModal({ onClose, onSelect }: Props) {
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-between px-6 py-4 border-t border-border">
+        <div className="flex items-center justify-between px-6 py-5 border-t border-border">
           <span className="text-sm text-muted-foreground">
             {selected.size > 0 ? `${selected.size} kişi seçildi` : "Kişi seçilmedi"}
           </span>
