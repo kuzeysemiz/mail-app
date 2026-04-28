@@ -103,7 +103,7 @@ export default function LogViewer() {
                   <tr key={log.id} className={`border-b border-border/40 last:border-0 ${i % 2 === 1 ? "bg-secondary/30" : ""}`}>
                     <td className="px-5 py-4 text-foreground font-mono text-xs">{log.recipientEmail}</td>
                     <td className="px-5 py-4">
-                      {log.status === "sent" ? (
+                      {(log.status === "sent" || log.status === "success") ? (
                         <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-primary/10 text-primary border border-primary/20 rounded-full text-xs font-medium"><CheckCircle2 size={12} />Başarılı</span>
                       ) : (
                         <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-destructive/10 text-destructive border border-destructive/20 rounded-full text-xs font-medium"><XCircle size={12} />Başarısız</span>
