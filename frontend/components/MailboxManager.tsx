@@ -7,8 +7,8 @@ interface Mailbox { id: number; email: string; createdAt: string; }
 
 function StatCard({ icon, value, label }: { icon: React.ReactNode; value: number | string; label: string }) {
   return (
-    <div className="bg-card border border-border rounded-xl p-5 flex items-center gap-4">
-      <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center text-primary shrink-0">
+    <div className="bg-card border border-border rounded-xl p-5 flex items-center gap-4" style={{ borderColor: "oklch(0.28 0.006 260)" }}>
+      <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0" style={{ background: "oklch(0.72 0.19 155 / 0.15)", color: "oklch(0.72 0.19 155)" }}>
         {icon}
       </div>
       <div>
