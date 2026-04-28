@@ -143,15 +143,52 @@ export default function MailboxManager() {
           </form>
 
           {/* Instructions */}
-          <div className="mt-6 p-5 bg-secondary rounded-xl">
-            <div className="flex items-center gap-2 mb-3">
+          <div className="mt-6 p-5 bg-secondary rounded-xl space-y-4">
+            <div className="flex items-center gap-2">
               <CheckCircle2 size={16} className="text-primary" />
               <span className="text-sm font-medium">Uygulama Şifresi Nasıl Alınır?</span>
             </div>
-            <ol className="text-xs text-muted-foreground space-y-2">
-              {["Google hesabınıza giriş yapın","Güvenlik ayarlarına gidin","2 Adımlı Doğrulama aktif olmalı","Uygulama şifreleri bölümünü açın","Yeni uygulama şifresi oluşturun"]
-                .map((s, i) => <li key={i}>{i+1}. {s}</li>)}
+
+            <ol className="text-xs text-muted-foreground space-y-2.5">
+              <li>1. Google hesabınıza giriş yapın</li>
+              <li className="flex items-start gap-1.5">
+                <span className="shrink-0">2.</span>
+                <span>
+                  2 Adımlı Doğrulama aktif olmalı — aktif değilse{" "}
+                  <a
+                    href="https://myaccount.google.com/signinoptions/two-step-verification"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-primary underline underline-offset-2"
+                  >
+                    buradan etkinleştirin
+                  </a>
+                </span>
+              </li>
+              <li>3. Güvenlik ayarlarına gidin</li>
+              <li className="flex items-start gap-1.5">
+                <span className="shrink-0">4.</span>
+                <span>
+                  Uygulama şifreleri sayfasını{" "}
+                  <a
+                    href="https://myaccount.google.com/apppasswords"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-primary underline underline-offset-2"
+                  >
+                    direkt buradan açın
+                  </a>
+                </span>
+              </li>
+              <li>5. Yeni uygulama şifresi oluşturun ve kopyalayın</li>
             </ol>
+
+            <div className="flex items-start gap-2 pt-1 border-t border-border/50">
+              <span className="text-yellow-400 text-sm shrink-0">⚠</span>
+              <p className="text-xs text-muted-foreground">
+                2 Adımlı Doğrulama aktif değilse Uygulama Şifreleri seçeneği Google'da görünmez.
+              </p>
+            </div>
           </div>
         </div>
 
