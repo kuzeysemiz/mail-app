@@ -52,9 +52,8 @@ function tagColor(tag: string) {
 }
 
 function TagBadge({ tag, small = false }: { tag: string; small?: boolean }) {
-  const c = tagColor(tag);
   return (
-    <span className={`inline-flex items-center border rounded-full font-medium ${c.bg} ${c.text} ${c.border} ${small ? "text-[10px] px-1.5 py-0.5" : "text-xs px-2.5 py-1"}`}>
+    <span className={`inline-flex items-center border rounded-full font-medium bg-secondary text-muted-foreground border-border/60 ${small ? "text-[10px] px-2 py-0.5" : "text-xs px-2.5 py-1"}`}>
       {tag}
     </span>
   );
@@ -321,7 +320,7 @@ export default function LeadsModal({ onClose, onSelect }: Props) {
                 <Search size={13} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
                 <input type="text" value={companySearch} onChange={e => setCompanySearch(e.target.value)}
                   placeholder="Şirket ara..."
-                  className="w-full pl-9 pr-4 py-2.5 bg-input border border-border rounded-lg text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring" />
+                  className="w-full pl-10 pr-4 py-3 bg-input border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring" />
               </div>
             </div>
 
@@ -466,7 +465,7 @@ export default function LeadsModal({ onClose, onSelect }: Props) {
             </p>
             <div className="flex flex-wrap gap-2">
               {Object.entries(selectedByCompany).map(([company, compLeads]) => (
-                <div key={company} className="flex items-center gap-1.5 pl-3 pr-1.5 py-1.5 bg-card border border-border rounded-lg text-xs">
+                <div key={company} className="flex items-center gap-2 pl-4 pr-2 py-2.5 bg-card border border-border rounded-lg text-xs">
                   <span className="font-medium text-foreground">{company}</span>
                   <span className="text-muted-foreground">({compLeads.length})</span>
                   <button
