@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
 import { X, Search, Building2, ChevronRight, Users, Download, Check, Loader2, AlertCircle, Trash2, Key, Sparkles } from "lucide-react";
-import { leadsAPI } from "@/services/api";
+import { leadsAPI, emailAPI } from "@/services/api";
 
 interface Lead {
   id: number;
@@ -70,6 +70,7 @@ export default function LeadsModal({ onClose, onSelect }: Props) {
   const [companySearch, setCompanySearch]     = useState("");
   const [leadSearch, setLeadSearch]           = useState("");
   const [allSelected, setAllSelected]         = useState<Map<number, Lead>>(new Map());
+  const [leadStatus, setLeadStatus]           = useState<Record<string, { sendCount: number; lastSent: string }>>({});
   const [loading, setLoading]                 = useState(false);
   const [tagging, setTagging]                 = useState(false);
   const [tagMsg, setTagMsg]                   = useState<{ text: string; type: "success" | "error" } | null>(null);
@@ -122,6 +123,12 @@ export default function LeadsModal({ onClose, onSelect }: Props) {
     try {
       const r = await leadsAPI.getLeads({ company, title: title || undefined, q: q || undefined });
       setLeads(r.data);
+      const emails = r.data.map((l: Lead) => l.email);
+      if (emails.length > 0) {
+        emailAPI.checkRecipients(emails).then(cr => setLeadStatus(cr.data)).catch(() => {});
+      } else {
+        setLeadStatus({});
+      }
     } catch {}
     setLoading(false);
   };
@@ -449,11 +456,22 @@ export default function LeadsModal({ onClose, onSelect }: Props) {
                           </p>
                           <p className="text-[11px] text-muted-foreground truncate">{lead.email}</p>
                         </div>
-                        {lead.title && (
-                          <span className="text-[10px] text-muted-foreground bg-secondary px-2 py-0.5 rounded-full shrink-0 max-w-[120px] truncate">
-                            {lead.title}
-                          </span>
-                        )}
+                        <div className="flex flex-col items-end gap-1 shrink-0">
+                          {lead.title && (
+                            <span className="text-[10px] text-muted-foreground bg-secondary px-2 py-0.5 rounded-full max-w-[120px] truncate">
+                              {lead.title}
+                            </span>
+                          )}
+                          {leadStatus[lead.email] ? (
+                            <span className="text-[10px] px-2 py-0.5 bg-yellow-500/10 text-yellow-500 border border-yellow-500/20 rounded-full whitespace-nowrap">
+                              ⚠ {leadStatus[lead.email].sendCount}× · {new Date(leadStatus[lead.email].lastSent).toLocaleDateString("tr-TR")}
+                            </span>
+                          ) : (
+                            <span className="text-[10px] px-2 py-0.5 bg-primary/10 text-primary border border-primary/20 rounded-full whitespace-nowrap">
+                              ✓ İlk kez
+                            </span>
+                          )}
+                        </div>
                       </label>
                     ))
                   )}
