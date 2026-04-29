@@ -59,6 +59,101 @@ router.get('/tags', (req, res) => {
   );
 });
 
+// Şirketi boş olan lead'leri analiz edip şirket ata
+router.post('/fill-companies', async (req, res) => {
+  // 1. company NULL olan lead'leri al
+  db.all(
+    `SELECT id, email, domain FROM leads WHERE company IS NULL OR company = ''`,
+    async (err, rows) => {
+      if (err) return res.status(500).json({ error: 'Veritabanı hatası' });
+      if (rows.length === 0) return res.json({ filled: 0, message: 'Tüm lead\'lerin şirketi zaten dolu' });
+
+      // 2. Domain'i email'den türet (domain boşsa)
+      rows.forEach(r => {
+        if (!r.domain && r.email && r.email.includes('@')) {
+          r.domain = r.email.split('@')[1].toLowerCase().trim();
+        }
+      });
+
+      // 3. DB'deki mevcut domain → company eşleşmelerini çek
+      db.all(
+        `SELECT DISTINCT domain, company FROM leads WHERE company IS NOT NULL AND company != '' AND domain IS NOT NULL AND domain != ''`,
+        async (err2, domainMap) => {
+          if (err2) return res.status(500).json({ error: 'Veritabanı hatası' });
+
+          const domainToCompany = {};
+          domainMap.forEach(r => { if (!domainToCompany[r.domain]) domainToCompany[r.domain] = r.company; });
+
+          // 4. Mevcut eşleşmelerle doldur
+          const toUpdate = [];   // { id, company }
+          const needAI = {};     // domain → [id, ...]
+
+          rows.forEach(r => {
+            if (!r.domain) return; // domain da yok, atla
+            const existing = domainToCompany[r.domain];
+            if (existing) {
+              toUpdate.push({ id: r.id, company: existing, domain: r.domain });
+            } else {
+              if (!needAI[r.domain]) needAI[r.domain] = [];
+              needAI[r.domain].push({ id: r.id, domain: r.domain });
+            }
+          });
+
+          // 5. AI ile kalan domain'leri çöz
+          const aiDomains = Object.keys(needAI);
+          const aiMap = {};
+
+          if (aiDomains.length > 0 && process.env.GROQ_API_KEY) {
+            const Groq = require('groq-sdk');
+            const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+            const BATCH = 50;
+            for (let i = 0; i < aiDomains.length; i += BATCH) {
+              const batch = aiDomains.slice(i, i + BATCH);
+              const list = batch.map((d, idx) => `${idx + 1}. ${d}`).join('\n');
+              try {
+                const completion = await groq.chat.completions.create({
+                  model: 'llama-3.3-70b-versatile',
+                  max_tokens: 1024,
+                  temperature: 0.1,
+                  messages: [
+                    {
+                      role: 'system',
+                      content: `Verilen domain adreslerinden şirket isimlerini çıkar. Kısa ve resmi şirket ismi kullan.
+SADECE geçerli JSON döndür, başka hiçbir şey yazma. Format: {"domain.com": "Şirket Adı"}`
+                    },
+                    { role: 'user', content: `Bu domainlerin şirket isimlerini ver:\n${list}` }
+                  ]
+                });
+                const raw = completion.choices[0].message.content.trim();
+                const jsonMatch = raw.match(/\{[\s\S]*\}/);
+                if (jsonMatch) Object.assign(aiMap, JSON.parse(jsonMatch[0]));
+              } catch (e) { /* devam */ }
+            }
+          }
+
+          // AI sonuçlarını da listeye ekle
+          aiDomains.forEach(domain => {
+            const company = aiMap[domain] || domain; // AI bulamazsa domain'i kullan
+            needAI[domain].forEach(r => toUpdate.push({ id: r.id, company, domain }));
+          });
+
+          // 6. DB güncelle
+          let filled = 0;
+          await new Promise(resolve => {
+            db.serialize(() => {
+              const stmt = db.prepare(`UPDATE leads SET company = ?, domain = ? WHERE id = ?`);
+              toUpdate.forEach(r => { stmt.run(r.company, r.domain, r.id); filled++; });
+              stmt.finalize(resolve);
+            });
+          });
+
+          res.json({ success: true, filled, total: rows.length });
+        }
+      );
+    }
+  );
+});
+
 // AI ile şirketleri otomatik etiketle
 router.post('/auto-tag', async (req, res) => {
   if (!process.env.GROQ_API_KEY) {

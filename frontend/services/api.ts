@@ -105,6 +105,7 @@ export const leadsAPI = {
   getStats: () => api.get("/leads/stats"),
   getTags: () => api.get("/leads/tags"),
   autoTag: () => api.post("/leads/auto-tag"),
+  fillCompanies: () => api.post("/leads/fill-companies"),
   import: () => api.post("/leads/import"),
   getApiKey: () => api.get("/leads/apikey"),
   saveApiKey: (apiKey: string) => api.post("/leads/apikey", { apiKey }),

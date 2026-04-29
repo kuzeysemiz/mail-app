@@ -76,6 +76,8 @@ export default function LeadsModal({ onClose, onSelect }: Props) {
   const [tagMsg, setTagMsg]                   = useState<{ text: string; type: "success" | "error" } | null>(null);
   const [importing, setImporting]             = useState(false);
   const [importMsg, setImportMsg]             = useState<{ text: string; type: "success" | "error" } | null>(null);
+  const [filling, setFilling]                 = useState(false);
+  const [fillMsg, setFillMsg]                 = useState<{ text: string; type: "success" | "error" } | null>(null);
   const [showImport, setShowImport]           = useState(false);
   const [apiKeyInput, setApiKeyInput]         = useState("");
   const [savedKey, setSavedKey]               = useState<{ saved: boolean; masked?: string }>({ saved: false });
@@ -153,6 +155,23 @@ export default function LeadsModal({ onClose, onSelect }: Props) {
       setTagMsg({ text: err.response?.data?.error || "Etiketleme başarısız", type: "error" });
     }
     setTagging(false);
+  };
+
+  const handleFillCompanies = async () => {
+    setFilling(true);
+    setFillMsg(null);
+    try {
+      const r = await leadsAPI.fillCompanies();
+      const msg = r.data.filled === 0
+        ? "Tüm lead'lerin şirketi zaten dolu"
+        : `${r.data.filled} lead şirkete atandı`;
+      setFillMsg({ text: msg, type: "success" });
+      leadsAPI.getStats().then(rs => setStats(rs.data)).catch(() => {});
+      loadCompanies(companySearch, activeTag);
+    } catch (err: any) {
+      setFillMsg({ text: err.response?.data?.error || "İşlem başarısız", type: "error" });
+    }
+    setFilling(false);
   };
 
   const handleSaveKey = async () => {
@@ -250,6 +269,14 @@ export default function LeadsModal({ onClose, onSelect }: Props) {
           </div>
           <div className="flex items-center gap-2">
             <button
+              onClick={handleFillCompanies}
+              disabled={filling}
+              className="flex items-center gap-2 px-4 py-2.5 bg-secondary border border-border rounded-lg text-xs font-medium hover:bg-muted disabled:opacity-60 transition-colors"
+            >
+              {filling ? <Loader2 size={13} className="animate-spin" /> : <Building2 size={13} />}
+              {filling ? "Analiz ediliyor..." : "Şirketleri Tamamla"}
+            </button>
+            <button
               onClick={handleAutoTag}
               disabled={tagging}
               className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-violet-600 to-purple-600 text-white rounded-lg text-xs font-semibold hover:opacity-90 disabled:opacity-60 transition-opacity"
@@ -268,6 +295,14 @@ export default function LeadsModal({ onClose, onSelect }: Props) {
             </button>
           </div>
         </div>
+
+        {/* Fill companies message */}
+        {fillMsg && (
+          <div className={`px-6 py-4 border-b border-border flex items-center gap-2 text-xs ${fillMsg.type === "success" ? "bg-primary/10 text-primary" : "bg-destructive/10 text-destructive"}`}>
+            {fillMsg.type === "success" ? <Check size={13} /> : <AlertCircle size={13} />}
+            {fillMsg.text}
+          </div>
+        )}
 
         {/* Tag message */}
         {tagMsg && (
