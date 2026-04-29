@@ -65,12 +65,15 @@ router.post('/auto-tag', async (req, res) => {
     return res.status(500).json({ error: 'GROQ_API_KEY eksik' });
   }
 
-  // Tüm unique şirket isimlerini al
+  // Sadece henüz hiç etiketi olmayan şirketleri al
   db.all(
-    `SELECT DISTINCT company FROM leads WHERE company IS NOT NULL ORDER BY company ASC`,
+    `SELECT DISTINCT l.company FROM leads l
+     WHERE l.company IS NOT NULL
+       AND l.company NOT IN (SELECT DISTINCT company FROM company_tags)
+     ORDER BY l.company ASC`,
     async (err, rows) => {
       if (err) return res.status(500).json({ error: 'Veritabanı hatası' });
-      if (rows.length === 0) return res.json({ tagged: 0 });
+      if (rows.length === 0) return res.json({ tagged: 0, skipped: 'Tüm şirketler zaten etiketli' });
 
       const companies = rows.map(r => r.company);
 

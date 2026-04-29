@@ -136,7 +136,10 @@ export default function LeadsModal({ onClose, onSelect }: Props) {
     setTagMsg(null);
     try {
       const r = await leadsAPI.autoTag();
-      setTagMsg({ text: `${r.data.companies} şirkete etiket atandı`, type: "success" });
+      const msg = r.data.tagged === 0
+        ? "Tüm şirketler zaten etiketli"
+        : `${r.data.companies} şirketten ${r.data.tagged} etiket atandı`;
+      setTagMsg({ text: msg, type: "success" });
       await refreshTags();
       loadCompanies(companySearch, activeTag);
     } catch (err: any) {
