@@ -90,7 +90,7 @@ async function confirmExpired() {
   }
 }
 
-// Tüm gelen kutuyu geçmişe dönük tara (zaman sınırı yok)
+// Tüm gelen kutuyu geçmişe dönük tara (zaman sınırı yok, tüm klasörler)
 async function deepScanMailbox(mailbox) {
   const client = new ImapFlow({
     host: 'imap.gmail.com',
@@ -100,31 +100,59 @@ async function deepScanMailbox(mailbox) {
     logger: false,
   });
 
-  const found = [];
+  // Gmail dil ayarına göre farklı klasör adları kullanabilir
+  const FOLDERS = [
+    'INBOX',
+    '[Gmail]/All Mail',
+    '[Google Mail]/All Mail',
+    '[Gmail]/Spam',
+    '[Google Mail]/Spam',
+  ];
+
+  const FETCH_BATCH = 50;
+  const found = new Set();
+
   try {
     await client.connect();
-    const lock = await client.getMailboxLock('INBOX');
-    try {
-      const [r1, r2, r3] = await Promise.all([
-        client.search({ from: 'mailer-daemon' }, { uid: true }).catch(() => []),
-        client.search({ subject: 'Delivery Status Notification' }, { uid: true }).catch(() => []),
-        client.search({ subject: 'Undelivered Mail' }, { uid: true }).catch(() => []),
-      ]);
-      const uids = [...new Set([...r1, ...r2, ...r3])];
 
-      for await (const msg of client.fetch(uids, { source: true }, { uid: true })) {
-        const failed = extractFailedRecipient(msg.source.toString());
-        if (failed) found.push(failed);
+    for (const folder of FOLDERS) {
+      let lock;
+      try {
+        lock = await client.getMailboxLock(folder);
+      } catch {
+        continue; // klasör yoksa atla
       }
-    } finally {
-      lock.release();
+      try {
+        const [r1, r2, r3, r4] = await Promise.all([
+          client.search({ from: 'mailer-daemon' }, { uid: true }).catch(() => []),
+          client.search({ subject: 'Delivery Status Notification' }, { uid: true }).catch(() => []),
+          client.search({ subject: 'Undelivered Mail' }, { uid: true }).catch(() => []),
+          client.search({ subject: 'Mail delivery failed' }, { uid: true }).catch(() => []),
+        ]);
+        const uids = [...new Set([...r1, ...r2, ...r3, ...r4])];
+        if (uids.length === 0) continue;
+
+        logger.info(`Deep scan: ${folder} — ${uids.length} mesaj bulundu (${mailbox.email})`);
+
+        // Büyük listelerde zaman aşımını önlemek için batch'le çek
+        for (let i = 0; i < uids.length; i += FETCH_BATCH) {
+          const batch = uids.slice(i, i + FETCH_BATCH);
+          for await (const msg of client.fetch(batch, { source: true }, { uid: true })) {
+            const failed = extractFailedRecipient(msg.source.toString());
+            if (failed) found.add(failed);
+          }
+        }
+      } finally {
+        lock.release();
+      }
     }
+
     await client.logout();
   } catch (err) {
     logger.error(`Deep scan IMAP hatası (${mailbox.email}): ${err.message}`);
     try { await client.logout(); } catch {}
   }
-  return found;
+  return [...found];
 }
 
 async function deepScan() {
