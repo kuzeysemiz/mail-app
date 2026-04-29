@@ -36,6 +36,7 @@
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
+button, [role="button"], label[for], select, a { cursor: pointer; }
 
 html, body {
   height: 100%;
