@@ -323,10 +323,10 @@ export default function LeadsModal({ onClose, onSelect }: Props) {
             {/* Search */}
             <div className="p-4 border-b border-border">
               <div className="relative">
-                <Search size={13} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
                 <input type="text" value={companySearch} onChange={e => setCompanySearch(e.target.value)}
                   placeholder="Şirket ara..."
-                  className="w-full pl-10 pr-4 py-3 bg-input border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring" />
+                  className="w-full pl-11 pr-4 py-3 bg-input border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring" />
               </div>
             </div>
 
@@ -404,10 +404,10 @@ export default function LeadsModal({ onClose, onSelect }: Props) {
                 {/* Filters */}
                 <div className="p-4 border-b border-border flex gap-2">
                   <div className="relative flex-1">
-                    <Search size={13} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                    <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
                     <input type="text" value={leadSearch} onChange={e => setLeadSearch(e.target.value)}
                       placeholder="İsim veya email ara..."
-                      className="w-full pl-9 pr-4 py-2.5 bg-input border border-border rounded-lg text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring" />
+                      className="w-full pl-11 pr-4 py-2.5 bg-input border border-border rounded-lg text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring" />
                   </div>
                   <select value={selectedTitle} onChange={e => setSelectedTitle(e.target.value)}
                     className="px-4 py-2.5 bg-input border border-border rounded-lg text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring">
