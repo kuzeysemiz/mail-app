@@ -1,5 +1,5 @@
 "use client";
-import { Mail, Plus, List, BarChart2, Monitor, X } from "lucide-react";
+import { Mail, Plus, List, BarChart2, Monitor, X, ShieldAlert } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const NAV_ITEMS = [
@@ -7,7 +7,8 @@ const NAV_ITEMS = [
   { id: "add",     label: "Mail Ekle",     icon: Plus },
   { id: "manage",  label: "Yönet",         icon: List },
   { id: "logs",    label: "Loglar",        icon: BarChart2 },
-  { id: "devices", label: "Bağlı Cihazlar", icon: Monitor },
+  { id: "blacklist", label: "Kara Liste",      icon: ShieldAlert },
+  { id: "devices",   label: "Bağlı Cihazlar", icon: Monitor },
 ];
 
 interface Props {

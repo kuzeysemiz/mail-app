@@ -14,7 +14,9 @@ const logRoutes     = require('./routes/logRoutes');
 const draftRoutes   = require('./routes/draftRoutes');
 const settingsRoutes = require('./routes/settingsRoutes');
 const aiRoutes      = require('./routes/aiRoutes');
-const leadsRoutes   = require('./routes/leadsRoutes');
+const leadsRoutes      = require('./routes/leadsRoutes');
+const blacklistRoutes  = require('./routes/blacklistRoutes');
+const bounceDetection  = require('./services/bounceDetectionService');
 
 const app = express();
 const PORT = process.env.PORT || 10001;
@@ -40,6 +42,7 @@ app.use('/api/drafts',    requireAuth, draftRoutes);
 app.use('/api/settings',  requireAuth, settingsRoutes);
 app.use('/api/ai',        requireAuth, aiRoutes);
 app.use('/api/leads',     requireAuth, leadsRoutes);
+app.use('/api/lists',     requireAuth, blacklistRoutes);
 
 // Error handling
 app.use((err, req, res, next) => {
@@ -53,6 +56,7 @@ app.use((req, res) => {
 });
 
 app.listen(PORT, () => {
+  bounceDetection.start();
   logger.info(`Server ${PORT} portunda başlatıldı`);
   console.log(`✓ Backend çalışıyor: http://localhost:${PORT}`);
   console.log(`✓ Veritabanı: mail_scheduler.db`);

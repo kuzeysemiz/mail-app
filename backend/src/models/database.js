@@ -136,6 +136,40 @@ db.serialize(() => {
       FOREIGN KEY (mailboxId) REFERENCES mailboxes(id) ON DELETE CASCADE
     )
   `);
+
+  // Kara liste
+  db.run(`
+    CREATE TABLE IF NOT EXISTS blacklist (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      email TEXT UNIQUE NOT NULL,
+      reason TEXT,
+      source TEXT DEFAULT 'manual',
+      createdAt DATETIME DEFAULT (datetime('now'))
+    )
+  `);
+
+  // Beyaz liste
+  db.run(`
+    CREATE TABLE IF NOT EXISTS whitelist (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      email TEXT UNIQUE NOT NULL,
+      confirmedAt DATETIME DEFAULT (datetime('now'))
+    )
+  `);
+
+  // Bounce izleme — gönderilen her mail 24 saat takip edilir
+  db.run(`
+    CREATE TABLE IF NOT EXISTS email_bounce_monitoring (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      emailId INTEGER NOT NULL,
+      mailboxId INTEGER NOT NULL,
+      recipientEmail TEXT NOT NULL,
+      sentAt DATETIME NOT NULL,
+      checkUntil DATETIME NOT NULL,
+      status TEXT DEFAULT 'monitoring',
+      FOREIGN KEY (emailId) REFERENCES emails(id) ON DELETE CASCADE
+    )
+  `);
 });
 
 module.exports = db;

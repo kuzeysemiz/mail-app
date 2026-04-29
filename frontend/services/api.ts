@@ -114,4 +114,16 @@ export const leadsAPI = {
   deleteApiKey: () => api.delete("/leads/apikey"),
 };
 
+export const blacklistAPI = {
+  getStats: () => api.get("/lists/stats"),
+  getBlacklist: (params?: { q?: string; limit?: number; offset?: number }) =>
+    api.get("/lists/blacklist", { params }),
+  addBlacklist: (email: string, reason?: string) =>
+    api.post("/lists/blacklist", { email, reason }),
+  removeBlacklist: (id: number) => api.delete(`/lists/blacklist/${id}`),
+  getWhitelist: (params?: { q?: string; limit?: number; offset?: number }) =>
+    api.get("/lists/whitelist", { params }),
+  removeWhitelist: (id: number) => api.delete(`/lists/whitelist/${id}`),
+};
+
 export default api;

@@ -10,14 +10,16 @@ const MailboxManager = dynamic(() => import("@/components/MailboxManager"), { ss
 const EmailAdder     = dynamic(() => import("@/components/EmailAdder"),     { ssr: false });
 const EmailManager   = dynamic(() => import("@/components/EmailManager"),   { ssr: false });
 const LogViewer      = dynamic(() => import("@/components/LogViewer"),      { ssr: false });
-const DeviceManager  = dynamic(() => import("@/components/DeviceManager"),  { ssr: false });
+const DeviceManager    = dynamic(() => import("@/components/DeviceManager"),    { ssr: false });
+const BlacklistManager = dynamic(() => import("@/components/BlacklistManager"), { ssr: false });
 
 const PAGE_TITLES: Record<string, string> = {
-  mailbox: "Gmail Hesapları",
-  add:     "Mail Ekle",
-  manage:  "Mail Listeleri",
-  logs:    "Gönderim Logları",
-  devices: "Bağlı Cihazlar",
+  mailbox:   "Gmail Hesapları",
+  add:       "Mail Ekle",
+  manage:    "Mail Listeleri",
+  logs:      "Gönderim Logları",
+  blacklist: "Kara Liste & Beyaz Liste",
+  devices:   "Bağlı Cihazlar",
 };
 
 export default function Home() {
@@ -107,6 +109,7 @@ export default function Home() {
           {activeTab === "add"     && <EmailAdder />}
           {activeTab === "manage"  && <EmailManager />}
           {activeTab === "logs"    && <LogViewer />}
+          {activeTab === "blacklist" && <BlacklistManager />}
           {activeTab === "devices" && <DeviceManager />}
         </main>
       </div>

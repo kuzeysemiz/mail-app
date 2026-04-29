@@ -121,6 +121,12 @@ class SchedulerService {
            VALUES (?, ?, ?, 'success', datetime('now'), ?)`,
           [emailData.id, emailData.mailboxId, emailData.recipientEmail, today]
         );
+        db.run(
+          `INSERT OR IGNORE INTO email_bounce_monitoring
+             (emailId, mailboxId, recipientEmail, sentAt, checkUntil, status)
+           VALUES (?, ?, ?, datetime('now'), datetime('now', '+24 hours'), 'monitoring')`,
+          [emailData.id, emailData.mailboxId, emailData.recipientEmail]
+        );
       } else {
         db.run(
           `INSERT INTO logs (emailId, mailboxId, recipientEmail, status, errorMessage, sentAt, day)
