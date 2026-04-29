@@ -544,7 +544,12 @@ export default function LeadsModal({ onClose, onSelect }: Props) {
           <span className="text-sm text-muted-foreground">
             {allSelected.size > 0 ? `${allSelected.size} kişi seçildi` : "Kişi seçilmedi"}
           </span>
-          <div className="flex gap-3">
+          <div className="flex items-center gap-3">
+            {stats && (
+              <span className="text-xs text-muted-foreground px-3 py-1.5 bg-secondary border border-border rounded-lg">
+                Toplam <span className="font-semibold text-foreground">{stats.total}</span> kişi · <span className="font-semibold text-foreground">{stats.companies}</span> şirket
+              </span>
+            )}
             <button onClick={onClose} className="px-5 py-3 bg-secondary border border-border text-foreground rounded-lg text-sm font-medium hover:bg-muted transition-colors">
               İptal
             </button>
