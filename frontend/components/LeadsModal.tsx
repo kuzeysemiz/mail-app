@@ -91,7 +91,7 @@ export default function LeadsModal({ onClose, onSelect }: Props) {
 
   useEffect(() => {
     if (searchTimer.current) clearTimeout(searchTimer.current);
-    searchTimer.current = setTimeout(() => loadCompanies(companySearch, activeTag), 300);
+    searchTimer.current = setTimeout(() => loadCompanies(companySearch, activeTag, true), 300);
   }, [companySearch, activeTag]);
 
   useEffect(() => {
@@ -107,10 +107,13 @@ export default function LeadsModal({ onClose, onSelect }: Props) {
     searchTimer.current = setTimeout(() => loadLeads(selectedCompany, selectedTitle, leadSearch), 300);
   }, [selectedTitle, leadSearch]);
 
-  const loadCompanies = async (q?: string, tag?: string) => {
+  const loadCompanies = async (q?: string, tag?: string, autoSelectFirst = false) => {
     try {
       const r = await leadsAPI.getCompanies({ q: q || undefined, tag: tag || undefined });
       setCompanies(r.data);
+      if (autoSelectFirst && r.data.length > 0) {
+        setSelectedCompany(r.data[0].company);
+      }
     } catch {}
   };
 
