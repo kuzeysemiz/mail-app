@@ -1,10 +1,11 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
-import { Users, Coins, Mail, RefreshCw, Plus, Minus, ShieldCheck } from "lucide-react";
-import { adminAPI } from "@/services/api";
+import { Users, Coins, Mail, RefreshCw, Plus, Minus, ShieldCheck, Settings } from "lucide-react";
+import { adminAPI, paddleAPI, creditsAPI } from "@/services/api";
 
 type User = { id: number; email: string; isAdmin: number; emailVerified: number; createdAt: string; credits: number };
 type Stats = { totalUsers: number; verifiedUsers: number; totalCredits: number; totalEmailsSent: number };
+type Package = { id: number; name: string; slug: string; emailCount: number | null; price: number | null; paddlePriceId: string | null };
 
 export default function AdminPanel() {
   const [users, setUsers]     = useState<User[]>([]);
@@ -16,6 +17,16 @@ export default function AdminPanel() {
   const [creditDesc, setCreditDesc]     = useState("");
   const [saving, setSaving]             = useState(false);
 
+  // Paddle config
+  const [paddleTab, setPaddleTab]           = useState(false);
+  const [packages, setPackages]             = useState<Package[]>([]);
+  const [paddleClientToken, setPaddleClientToken] = useState("");
+  const [paddleApiKey, setPaddleApiKey]     = useState("");
+  const [paddleWebhookSecret, setPaddleWebhookSecret] = useState("");
+  const [paddleEnv, setPaddleEnv]           = useState<"sandbox" | "production">("sandbox");
+  const [paddleSaving, setPaddleSaving]     = useState(false);
+  const [priceIds, setPriceIds]             = useState<Record<string, string>>({});
+
   const load = useCallback(() => {
     setLoading(true);
     Promise.all([adminAPI.getUsers(), adminAPI.getStats()])
@@ -25,6 +36,32 @@ export default function AdminPanel() {
   }, []);
 
   useEffect(() => { load(); }, [load]);
+
+  useEffect(() => {
+    if (!paddleTab) return;
+    creditsAPI.getPackages().then(r => {
+      setPackages(r.data);
+      const ids: Record<string, string> = {};
+      r.data.forEach((p: Package) => { ids[p.slug] = p.paddlePriceId || ""; });
+      setPriceIds(ids);
+    }).catch(() => {});
+  }, [paddleTab]);
+
+  const savePaddleConfig = async () => {
+    setPaddleSaving(true);
+    try {
+      await paddleAPI.saveConfig({
+        clientToken: paddleClientToken || undefined,
+        apiKey: paddleApiKey || undefined,
+        webhookSecret: paddleWebhookSecret || undefined,
+        environment: paddleEnv,
+      });
+      for (const [slug, priceId] of Object.entries(priceIds)) {
+        if (priceId) await paddleAPI.setPackagePrice(slug, priceId);
+      }
+    } catch { /* sessiz */ }
+    finally { setPaddleSaving(false); }
+  };
 
   const handleCredit = async () => {
     if (!creditModal || !creditAmount) return;
@@ -44,6 +81,89 @@ export default function AdminPanel() {
   const filtered = users.filter(u => u.email.toLowerCase().includes(q.toLowerCase()));
 
   return (
+    <div className="space-y-6">
+      {/* Sekme toggle */}
+      <div className="flex gap-2">
+        <button
+          onClick={() => setPaddleTab(false)}
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${!paddleTab ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-secondary"}`}
+        >
+          Kullanıcılar
+        </button>
+        <button
+          onClick={() => setPaddleTab(true)}
+          className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${paddleTab ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-secondary"}`}
+        >
+          <Settings size={13} /> Paddle Ayarları
+        </button>
+      </div>
+
+      {paddleTab ? (
+        <div className="space-y-5">
+          <div className="bg-card border border-border rounded-xl p-5 space-y-4">
+            <h3 className="text-sm font-semibold text-foreground">Paddle Anahtarları</h3>
+            <p className="text-xs text-muted-foreground">Bu alanları boş bırakırsanız mevcut değerler korunur.</p>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {[
+                { label: "Client Token", value: paddleClientToken, set: setPaddleClientToken, placeholder: "client_live_..." },
+                { label: "API Key", value: paddleApiKey, set: setPaddleApiKey, placeholder: "pdl_..." },
+                { label: "Webhook Secret", value: paddleWebhookSecret, set: setPaddleWebhookSecret, placeholder: "pdl_ntfset_..." },
+              ].map(f => (
+                <div key={f.label} className="space-y-1">
+                  <label className="text-xs font-medium text-muted-foreground">{f.label}</label>
+                  <input
+                    value={f.value}
+                    onChange={e => f.set(e.target.value)}
+                    placeholder={f.placeholder}
+                    className="w-full px-3 py-2 bg-input border border-border rounded-lg text-xs outline-none focus:ring-1 focus:ring-ring placeholder:text-muted-foreground"
+                  />
+                </div>
+              ))}
+
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-muted-foreground">Ortam</label>
+                <select
+                  value={paddleEnv}
+                  onChange={e => setPaddleEnv(e.target.value as "sandbox" | "production")}
+                  className="w-full px-3 py-2 bg-input border border-border rounded-lg text-xs outline-none focus:ring-1 focus:ring-ring"
+                >
+                  <option value="sandbox">Sandbox (Test)</option>
+                  <option value="production">Production (Canlı)</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-card border border-border rounded-xl p-5 space-y-4">
+            <h3 className="text-sm font-semibold text-foreground">Paket Price ID&apos;leri</h3>
+            <div className="space-y-3">
+              {packages.filter(p => p.emailCount).map(pkg => (
+                <div key={pkg.slug} className="flex items-center gap-3">
+                  <div className="w-28 shrink-0">
+                    <p className="text-xs font-medium text-foreground">{pkg.name}</p>
+                    <p className="text-[10px] text-muted-foreground">{pkg.emailCount?.toLocaleString("tr-TR")} kredi</p>
+                  </div>
+                  <input
+                    value={priceIds[pkg.slug] || ""}
+                    onChange={e => setPriceIds(p => ({ ...p, [pkg.slug]: e.target.value }))}
+                    placeholder="pri_..."
+                    className="flex-1 px-3 py-2 bg-input border border-border rounded-lg text-xs outline-none focus:ring-1 focus:ring-ring placeholder:text-muted-foreground"
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <button
+            onClick={savePaddleConfig}
+            disabled={paddleSaving}
+            className="px-5 py-2.5 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:opacity-90 disabled:opacity-50 transition-opacity"
+          >
+            {paddleSaving ? "Kaydediliyor..." : "Kaydet"}
+          </button>
+        </div>
+      ) : (
     <div className="space-y-6">
       {/* Stats */}
       {stats && (
@@ -172,6 +292,8 @@ export default function AdminPanel() {
             </div>
           </div>
         </div>
+      )}
+    </div>
       )}
     </div>
   );

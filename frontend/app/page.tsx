@@ -16,6 +16,7 @@ const BlacklistManager   = dynamic(() => import("@/components/BlacklistManager")
 const DeployMonitor      = dynamic(() => import("@/components/DeployMonitor"),      { ssr: false });
 const DeviceManager      = dynamic(() => import("@/components/DeviceManager"),      { ssr: false });
 const AdminPanel         = dynamic(() => import("@/components/AdminPanel"),         { ssr: false });
+const CreditsPanel       = dynamic(() => import("@/components/CreditsPanel"),       { ssr: false });
 
 type Screen = "loading" | "login" | "register" | "admin-otp" | "app";
 
@@ -28,6 +29,7 @@ const PAGE_TITLES: Record<string, string> = {
   deploy:    "Deploy Monitörü",
   devices:   "Bağlı Cihazlar",
   admin:     "Admin Paneli",
+  credits:   "Krediler",
 };
 
 export default function Home() {
@@ -35,6 +37,7 @@ export default function Home() {
   const [activeTab, setActiveTab]   = useState("mailbox");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isAdmin, setIsAdmin]       = useState(false);
+  const [credits, setCredits]       = useState<number | null>(null);
 
   useEffect(() => {
     const token  = localStorage.getItem("authToken");
@@ -48,6 +51,7 @@ export default function Home() {
     userAPI.me()
       .then(r => {
         setIsAdmin(r.data.user?.isAdmin === 1 || r.data.user?.isAdmin === true);
+        if (typeof r.data.credits === 'number') setCredits(r.data.credits);
         setScreen("app");
       })
       .catch(() => setScreen("login"));
@@ -108,6 +112,7 @@ export default function Home() {
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
         isAdmin={isAdmin}
+        credits={credits}
       />
 
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
@@ -139,6 +144,7 @@ export default function Home() {
           {activeTab === "deploy"    && <DeployMonitor />}
           {activeTab === "devices"   && <DeviceManager />}
           {activeTab === "admin"     && <AdminPanel />}
+          {activeTab === "credits"   && <CreditsPanel onCreditsChange={setCredits} />}
         </main>
       </div>
     </div>

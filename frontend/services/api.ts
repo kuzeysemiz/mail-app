@@ -137,6 +137,14 @@ export const adminAPI = {
   getStats: () => api.get("/admin/stats"),
 };
 
+export const paddleAPI = {
+  getConfig: () => api.get("/paddle/config"),
+  saveConfig: (data: { clientToken?: string; apiKey?: string; webhookSecret?: string; environment?: string }) =>
+    api.post("/paddle/config", data),
+  setPackagePrice: (slug: string, paddlePriceId: string) =>
+    api.post(`/paddle/packages/${slug}/price`, { paddlePriceId }),
+};
+
 export const deployAPI = {
   getConfig: () => api.get("/deploy/config"),
   saveToken: (token: string) => api.post("/deploy/config", { token }),

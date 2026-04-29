@@ -20,10 +20,14 @@ const deployRoutes     = require('./routes/deployRoutes');
 const userAuthRoutes   = require('./routes/userAuthRoutes');
 const creditsRoutes    = require('./routes/creditsRoutes');
 const adminRoutes      = require('./routes/adminRoutes');
+const paddle           = require('./routes/paddleRoutes');
 const bounceDetection  = require('./services/bounceDetectionService');
 
 const app = express();
 const PORT = process.env.PORT || 10001;
+
+// Paddle webhook: raw body zorunlu, bodyParser'dan önce mount edilmeli
+app.post('/api/paddle/webhook', express.raw({ type: 'application/json' }), paddle.webhookHandler);
 
 // Middleware
 app.use(cors());
@@ -51,6 +55,7 @@ app.use('/api/leads',     requireAuth, leadsRoutes);
 app.use('/api/lists',     requireAuth, blacklistRoutes);
 app.use('/api/admin',     requireAuth, adminRoutes);
 app.use('/api/deploy',    requireAuth, deployRoutes);
+app.use('/api/paddle',    requireAuth, paddle.router);
 
 // Error handling
 app.use((err, req, res, next) => {

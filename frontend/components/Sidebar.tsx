@@ -1,5 +1,5 @@
 "use client";
-import { Mail, Plus, List, BarChart2, Monitor, X, ShieldAlert, Settings2 } from "lucide-react";
+import { Mail, Plus, List, BarChart2, Monitor, X, ShieldAlert, Settings2, Coins } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const NAV_ITEMS = [
@@ -9,6 +9,7 @@ const NAV_ITEMS = [
   { id: "logs",      label: "Loglar",         icon: BarChart2 },
   { id: "blacklist", label: "Kara Liste",     icon: ShieldAlert },
   { id: "devices",   label: "Bağlı Cihazlar", icon: Monitor },
+  { id: "credits",   label: "Krediler",       icon: Coins },
 ];
 
 interface Props {
@@ -17,9 +18,10 @@ interface Props {
   isOpen: boolean;
   onClose: () => void;
   isAdmin?: boolean;
+  credits?: number | null;
 }
 
-export default function Sidebar({ activeTab, onTabChange, isOpen, onClose, isAdmin }: Props) {
+export default function Sidebar({ activeTab, onTabChange, isOpen, onClose, isAdmin, credits }: Props) {
   const handleNav = (id: string) => { onTabChange(id); onClose(); };
 
   return (
@@ -70,7 +72,12 @@ export default function Sidebar({ activeTab, onTabChange, isOpen, onClose, isAdm
               )}
             >
               <Icon size={17} />
-              {label}
+              <span className="flex-1 text-left">{label}</span>
+              {id === "credits" && !isAdmin && credits !== null && credits !== undefined && (
+                <span className="text-[10px] bg-yellow-500/15 text-yellow-500 px-1.5 py-0.5 rounded-full shrink-0">
+                  {credits.toLocaleString("tr-TR")}
+                </span>
+              )}
             </button>
           ))}
 
