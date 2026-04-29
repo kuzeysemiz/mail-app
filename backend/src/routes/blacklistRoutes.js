@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const db = require('../models/database');
 const logger = require('../middleware/logger');
+const bounceDetection = require('../services/bounceDetectionService');
 
 // Stats
 router.get('/stats', (req, res) => {
@@ -87,6 +88,46 @@ router.delete('/whitelist/:id', (req, res) => {
     if (this.changes === 0) return res.status(404).json({ error: 'Bulunamadı' });
     res.json({ success: true });
   });
+});
+
+// İzleme listesi
+router.get('/monitoring', (req, res) => {
+  const { q, limit = 200, offset = 0 } = req.query;
+  let query = `
+    SELECT ebm.id, ebm.recipientEmail as email, ebm.sentAt, ebm.checkUntil, ebm.status, m.email as mailbox
+    FROM email_bounce_monitoring ebm
+    LEFT JOIN mailboxes m ON m.id = ebm.mailboxId
+    WHERE ebm.status = 'monitoring'
+  `;
+  const params = [];
+  if (q) { query += ` AND ebm.recipientEmail LIKE ?`; params.push(`%${q}%`); }
+  query += ` ORDER BY ebm.sentAt DESC LIMIT ? OFFSET ?`;
+  params.push(parseInt(limit), parseInt(offset));
+
+  db.all(query, params, (err, rows) => {
+    if (err) return res.status(500).json({ error: 'Veritabanı hatası' });
+    db.get(
+      `SELECT COUNT(*) as total FROM email_bounce_monitoring WHERE status = 'monitoring'${q ? ' AND recipientEmail LIKE ?' : ''}`,
+      q ? [`%${q}%`] : [],
+      (_, countRow) => res.json({ rows, total: countRow?.total || 0 })
+    );
+  });
+});
+
+// Geçmiş Gmail taraması — tüm posta kutularındaki NDR/bounce'ları kara listeye ekle
+let scanRunning = false;
+router.post('/scan-bounces', async (req, res) => {
+  if (scanRunning) return res.status(409).json({ error: 'Tarama zaten devam ediyor' });
+  scanRunning = true;
+  try {
+    const result = await bounceDetection.deepScan();
+    res.json({ success: true, ...result });
+  } catch (err) {
+    logger.error('Deep scan hatası:', err.message);
+    res.status(500).json({ error: err.message });
+  } finally {
+    scanRunning = false;
+  }
 });
 
 module.exports = router;

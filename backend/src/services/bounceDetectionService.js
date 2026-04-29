@@ -90,6 +90,70 @@ async function confirmExpired() {
   }
 }
 
+// Tüm gelen kutuyu geçmişe dönük tara (zaman sınırı yok)
+async function deepScanMailbox(mailbox) {
+  const client = new ImapFlow({
+    host: 'imap.gmail.com',
+    port: 993,
+    secure: true,
+    auth: { user: mailbox.email, pass: mailbox.appPassword },
+    logger: false,
+  });
+
+  const found = [];
+  try {
+    await client.connect();
+    const lock = await client.getMailboxLock('INBOX');
+    try {
+      const [r1, r2, r3] = await Promise.all([
+        client.search({ from: 'mailer-daemon' }, { uid: true }).catch(() => []),
+        client.search({ subject: 'Delivery Status Notification' }, { uid: true }).catch(() => []),
+        client.search({ subject: 'Undelivered Mail' }, { uid: true }).catch(() => []),
+      ]);
+      const uids = [...new Set([...r1, ...r2, ...r3])];
+
+      for await (const msg of client.fetch(uids, { source: true }, { uid: true })) {
+        const failed = extractFailedRecipient(msg.source.toString());
+        if (failed) found.push(failed);
+      }
+    } finally {
+      lock.release();
+    }
+    await client.logout();
+  } catch (err) {
+    logger.error(`Deep scan IMAP hatası (${mailbox.email}): ${err.message}`);
+    try { await client.logout(); } catch {}
+  }
+  return found;
+}
+
+async function deepScan() {
+  const mailboxes = await new Promise(resolve =>
+    db.all(`SELECT id, email, appPassword FROM mailboxes`, (_, rows) => resolve(rows || []))
+  );
+
+  let added = 0;
+  for (const mailbox of mailboxes) {
+    const emails = await deepScanMailbox(mailbox);
+    for (const email of emails) {
+      await new Promise(resolve =>
+        db.run(
+          `INSERT OR IGNORE INTO blacklist (email, reason, source) VALUES (?, 'Bounce — geçmiş tarama', 'bounce')`,
+          [email],
+          function(err) {
+            if (!err && this.changes > 0) {
+              logger.info(`Kara listeye eklendi (deep scan): ${email}`);
+              added++;
+            }
+            resolve();
+          }
+        )
+      );
+    }
+  }
+  return { added, scanned: mailboxes.length };
+}
+
 let running = false;
 
 async function run() {
@@ -125,4 +189,4 @@ function start() {
   logger.info('Bounce detection servisi başlatıldı (5 dk\'da bir kontrol)');
 }
 
-module.exports = { start };
+module.exports = { start, deepScan };

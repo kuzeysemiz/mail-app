@@ -124,6 +124,9 @@ export const blacklistAPI = {
   getWhitelist: (params?: { q?: string; limit?: number; offset?: number }) =>
     api.get("/lists/whitelist", { params }),
   removeWhitelist: (id: number) => api.delete(`/lists/whitelist/${id}`),
+  getMonitoring: (params?: { q?: string; limit?: number }) =>
+    api.get("/lists/monitoring", { params }),
+  scanBounces: () => api.post("/lists/scan-bounces"),
 };
 
 export default api;
