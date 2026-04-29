@@ -57,8 +57,10 @@ export default function EmailAdder() {
   const [langButtons, setLangButtons]     = useState<LangBtn[]>([]);
   const [showDrafts, setShowDrafts]       = useState(false);
   const [showLeadsModal, setShowLeadsModal] = useState(false);
+  const [recipientStatus, setRecipientStatus] = useState<Record<string, { sendCount: number; lastSent: string }>>({});
   const rulesPanelRef                     = useRef<HTMLDivElement>(null);
   const textareaRef                       = useRef<HTMLTextAreaElement>(null);
+  const checkTimer                        = useRef<NodeJS.Timeout | null>(null);
 
   const showMessage = (text: string, type: string) => {
     setMsg({ text, type });
@@ -78,6 +80,15 @@ export default function EmailAdder() {
   useEffect(() => {
     if (selectedMailbox) draftAPI.getByMailbox(selectedMailbox).then(r => setDrafts(r.data)).catch(() => {});
   }, [selectedMailbox]);
+
+  useEffect(() => {
+    if (checkTimer.current) clearTimeout(checkTimer.current);
+    const emails = recipients.split("\n").map(e => e.trim()).filter(Boolean);
+    if (emails.length === 0) { setRecipientStatus({}); return; }
+    checkTimer.current = setTimeout(() => {
+      emailAPI.checkRecipients(emails).then(r => setRecipientStatus(r.data)).catch(() => {});
+    }, 500);
+  }, [recipients]);
 
   useEffect(() => {
     const close = (e: MouseEvent) => {
@@ -246,6 +257,39 @@ export default function EmailAdder() {
               />
             </div>
             <p className="text-xs text-muted-foreground mt-2">{recipientCount} / 100 {suggestion.text && <span className="text-primary">• Tab ile tamamla</span>}</p>
+
+            {/* Alıcı geçmiş durumu */}
+            {recipientCount > 0 && (
+              <div className="mt-3 border border-border rounded-lg overflow-hidden">
+                <div className="px-3 py-2 bg-secondary border-b border-border flex items-center justify-between">
+                  <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Gönderim Geçmişi</span>
+                  {recipients.split("\n").map(e => e.trim()).filter(Boolean).some(e => recipientStatus[e]) && (
+                    <span className="text-[11px] text-yellow-500 font-medium">
+                      {recipients.split("\n").map(e => e.trim()).filter(Boolean).filter(e => recipientStatus[e]).length} adrese daha önce gönderilmiş
+                    </span>
+                  )}
+                </div>
+                <div className="divide-y divide-border/50 max-h-48 overflow-y-auto">
+                  {recipients.split("\n").map(e => e.trim()).filter(Boolean).map(email => {
+                    const prev = recipientStatus[email];
+                    return (
+                      <div key={email} className="flex items-center justify-between px-3 py-2 text-xs">
+                        <span className="text-foreground font-mono truncate flex-1 mr-3">{email}</span>
+                        {prev ? (
+                          <span className="shrink-0 flex items-center gap-1.5 px-2.5 py-1 bg-yellow-500/10 text-yellow-500 border border-yellow-500/20 rounded-full font-medium whitespace-nowrap">
+                            ⚠ {prev.sendCount}× gönderildi · {new Date(prev.lastSent).toLocaleDateString("tr-TR")}
+                          </span>
+                        ) : (
+                          <span className="shrink-0 flex items-center gap-1.5 px-2.5 py-1 bg-primary/10 text-primary border border-primary/20 rounded-full font-medium">
+                            ✓ İlk kez
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
 
           <div>

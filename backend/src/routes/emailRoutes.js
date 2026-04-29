@@ -88,6 +88,27 @@ router.post('/emails/add', (req, res) => {
   });
 });
 
+// Alıcıların daha önce mail alıp almadığını kontrol et
+router.post('/check-recipients', (req, res) => {
+  const { emails } = req.body;
+  if (!Array.isArray(emails) || emails.length === 0) return res.json({});
+
+  const placeholders = emails.map(() => '?').join(',');
+  db.all(
+    `SELECT recipientEmail, COUNT(*) as sendCount, MAX(sentAt) as lastSent
+     FROM logs
+     WHERE recipientEmail IN (${placeholders}) AND (status = 'sent' OR status = 'success')
+     GROUP BY recipientEmail`,
+    emails,
+    (err, rows) => {
+      if (err) return res.status(500).json({ error: 'Veritabanı hatası' });
+      const result = {};
+      rows.forEach(r => { result[r.recipientEmail] = { sendCount: r.sendCount, lastSent: r.lastSent }; });
+      res.json(result);
+    }
+  );
+});
+
 // Daha önce kullanılan tüm alıcı adresleri (autocomplete için)
 router.get('/saved-emails', (req, res) => {
   db.all(

@@ -49,6 +49,7 @@ export const mailboxAPI = {
 export const emailAPI = {
   add: (mailboxId: string, recipients: string[], mailSubject: string, mailContent: string, mailSignature: string, manualDate: string | null, manualTime: string | null, weekNumber: string | null, businessHours: boolean) =>
     api.post("/emails/emails/add", { mailboxId, recipients, mailSubject, mailContent, mailSignature, manualDate, manualTime, weekNumber, businessHours }),
+  checkRecipients: (emails: string[]) => api.post("/emails/check-recipients", { emails }),
   getByMailbox: (mailboxId: string, status?: string) => {
     const params = status ? `?status=${status}` : "";
     return api.get(`/emails/emails/${mailboxId}${params}`);
