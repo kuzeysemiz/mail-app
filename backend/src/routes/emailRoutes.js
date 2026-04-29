@@ -97,7 +97,7 @@ router.post('/check-recipients', (req, res) => {
   db.all(
     `SELECT recipientEmail, COUNT(*) as sendCount, MAX(sentAt) as lastSent
      FROM logs
-     WHERE recipientEmail IN (${placeholders}) AND (status = 'sent' OR status = 'success')
+     WHERE recipientEmail IN (${placeholders}) AND status IN ('sent','success')
      GROUP BY recipientEmail`,
     emails,
     (err, rows) => {

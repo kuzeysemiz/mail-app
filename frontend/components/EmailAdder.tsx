@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import dynamic from "next/dynamic";
 import { Sparkles, Settings2, Languages, BookOpen, Plus, FileText, Trash2, Edit2, ChevronDown, ChevronUp, Calendar, Clock, Zap, Send, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -83,11 +83,11 @@ export default function EmailAdder() {
 
   useEffect(() => {
     if (checkTimer.current) clearTimeout(checkTimer.current);
-    const emails = recipients.split("\n").map(e => e.trim()).filter(Boolean);
-    if (emails.length === 0) { setRecipientStatus({}); return; }
+    if (recipientList.length === 0) { setRecipientStatus({}); return; }
     checkTimer.current = setTimeout(() => {
-      emailAPI.checkRecipients(emails).then(r => setRecipientStatus(r.data)).catch(() => {});
+      emailAPI.checkRecipients(recipientList).then(r => setRecipientStatus(r.data)).catch(() => {});
     }, 500);
+    return () => { if (checkTimer.current) clearTimeout(checkTimer.current); };
   }, [recipients]);
 
   useEffect(() => {
@@ -212,7 +212,8 @@ export default function EmailAdder() {
     setLoading(false);
   };
 
-  const recipientCount = recipients.split("\n").filter(e => e.trim()).length;
+  const recipientList = useMemo(() => recipients.split("\n").map(e => e.trim()).filter(Boolean), [recipients]);
+  const recipientCount = recipientList.length;
   const activeRules = aiRules.filter(r => r.active).length;
 
   return (
@@ -263,14 +264,14 @@ export default function EmailAdder() {
               <div className="mt-3 border border-border rounded-lg overflow-hidden">
                 <div className="px-3 py-2 bg-secondary border-b border-border flex items-center justify-between">
                   <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Gönderim Geçmişi</span>
-                  {recipients.split("\n").map(e => e.trim()).filter(Boolean).some(e => recipientStatus[e]) && (
+                  {recipientList.some(e => recipientStatus[e]) && (
                     <span className="text-[11px] text-yellow-500 font-medium">
-                      {recipients.split("\n").map(e => e.trim()).filter(Boolean).filter(e => recipientStatus[e]).length} adrese daha önce gönderilmiş
+                      {recipientList.filter(e => recipientStatus[e]).length} adrese daha önce gönderilmiş
                     </span>
                   )}
                 </div>
                 <div className="divide-y divide-border/50 max-h-48 overflow-y-auto">
-                  {recipients.split("\n").map(e => e.trim()).filter(Boolean).map(email => {
+                  {recipientList.map(email => {
                     const prev = recipientStatus[email];
                     return (
                       <div key={email} className="flex items-center justify-between px-3 py-2 text-xs">

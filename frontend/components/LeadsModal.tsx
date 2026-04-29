@@ -51,6 +51,16 @@ function tagColor(tag: string) {
   return TAG_COLORS[hash % TAG_COLORS.length];
 }
 
+function MsgBanner({ msg }: { msg: { text: string; type: "success" | "error" } | null }) {
+  if (!msg) return null;
+  return (
+    <div className={`px-6 py-4 border-b border-border flex items-center gap-2 text-xs ${msg.type === "success" ? "bg-primary/10 text-primary" : "bg-destructive/10 text-destructive"}`}>
+      {msg.type === "success" ? <Check size={13} /> : <AlertCircle size={13} />}
+      {msg.text}
+    </div>
+  );
+}
+
 function TagBadge({ tag, small = false }: { tag: string; small?: boolean }) {
   return (
     <span className={`inline-flex items-center border rounded-full font-medium bg-secondary text-muted-foreground border-border/60 ${small ? "text-[10px] px-2 py-0.5" : "text-xs px-2.5 py-1"}`}>
@@ -87,6 +97,7 @@ export default function LeadsModal({ onClose, onSelect }: Props) {
   const [savingKey, setSavingKey]             = useState(false);
   const [stats, setStats]                     = useState<{ total: number; companies: number } | null>(null);
   const searchTimer = useRef<NodeJS.Timeout | null>(null);
+  const loadLeadsId = useRef(0);
 
   useEffect(() => {
     loadCompanies();
@@ -124,18 +135,22 @@ export default function LeadsModal({ onClose, onSelect }: Props) {
   };
 
   const loadLeads = async (company: string, title: string, q?: string) => {
+    const reqId = ++loadLeadsId.current;
     setLoading(true);
     try {
       const r = await leadsAPI.getLeads({ company, title: title || undefined, q: q || undefined });
+      if (reqId !== loadLeadsId.current) return;
       setLeads(r.data);
       const emails = r.data.map((l: Lead) => l.email);
       if (emails.length > 0) {
-        emailAPI.checkRecipients(emails).then(cr => setLeadStatus(cr.data)).catch(() => {});
+        emailAPI.checkRecipients(emails).then(cr => {
+          if (reqId === loadLeadsId.current) setLeadStatus(cr.data);
+        }).catch(() => {});
       } else {
         setLeadStatus({});
       }
     } catch {}
-    setLoading(false);
+    if (reqId === loadLeadsId.current) setLoading(false);
   };
 
   const refreshTags = async () => {
@@ -312,21 +327,8 @@ export default function LeadsModal({ onClose, onSelect }: Props) {
           </div>
         </div>
 
-        {/* Fill companies message */}
-        {fillMsg && (
-          <div className={`px-6 py-4 border-b border-border flex items-center gap-2 text-xs ${fillMsg.type === "success" ? "bg-primary/10 text-primary" : "bg-destructive/10 text-destructive"}`}>
-            {fillMsg.type === "success" ? <Check size={13} /> : <AlertCircle size={13} />}
-            {fillMsg.text}
-          </div>
-        )}
-
-        {/* Tag message */}
-        {tagMsg && (
-          <div className={`px-6 py-4 border-b border-border flex items-center gap-2 text-xs ${tagMsg.type === "success" ? "bg-primary/10 text-primary" : "bg-destructive/10 text-destructive"}`}>
-            {tagMsg.type === "success" ? <Check size={13} /> : <AlertCircle size={13} />}
-            {tagMsg.text}
-          </div>
-        )}
+        <MsgBanner msg={fillMsg} />
+        <MsgBanner msg={tagMsg} />
 
         {/* Import panel */}
         {showImport && (

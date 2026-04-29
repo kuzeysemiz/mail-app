@@ -61,21 +61,18 @@ router.get('/tags', (req, res) => {
 
 // Şirketi boş olan lead'leri analiz edip şirket ata
 router.post('/fill-companies', async (req, res) => {
-  // 1. company NULL olan lead'leri al
   db.all(
     `SELECT id, email, domain FROM leads WHERE company IS NULL OR company = ''`,
     async (err, rows) => {
       if (err) return res.status(500).json({ error: 'Veritabanı hatası' });
       if (rows.length === 0) return res.json({ filled: 0, message: 'Tüm lead\'lerin şirketi zaten dolu' });
 
-      // 2. Domain'i email'den türet (domain boşsa)
       rows.forEach(r => {
         if (!r.domain && r.email && r.email.includes('@')) {
           r.domain = r.email.split('@')[1].toLowerCase().trim();
         }
       });
 
-      // 3. DB'deki mevcut domain → company eşleşmelerini çek
       db.all(
         `SELECT DISTINCT domain, company FROM leads WHERE company IS NOT NULL AND company != '' AND domain IS NOT NULL AND domain != ''`,
         async (err2, domainMap) => {
@@ -84,12 +81,11 @@ router.post('/fill-companies', async (req, res) => {
           const domainToCompany = {};
           domainMap.forEach(r => { if (!domainToCompany[r.domain]) domainToCompany[r.domain] = r.company; });
 
-          // 4. Mevcut eşleşmelerle doldur
-          const toUpdate = [];   // { id, company }
-          const needAI = {};     // domain → [id, ...]
+          const toUpdate = [];
+          const needAI = {};
 
           rows.forEach(r => {
-            if (!r.domain) return; // domain da yok, atla
+            if (!r.domain) return;
             const existing = domainToCompany[r.domain];
             if (existing) {
               toUpdate.push({ id: r.id, company: existing, domain: r.domain });
@@ -99,16 +95,17 @@ router.post('/fill-companies', async (req, res) => {
             }
           });
 
-          // 5. AI ile kalan domain'leri çöz
           const aiDomains = Object.keys(needAI);
           const aiMap = {};
 
           if (aiDomains.length > 0 && process.env.GROQ_API_KEY) {
-            const Groq = require('groq-sdk');
             const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
             const BATCH = 50;
+            const batches = [];
             for (let i = 0; i < aiDomains.length; i += BATCH) {
-              const batch = aiDomains.slice(i, i + BATCH);
+              batches.push(aiDomains.slice(i, i + BATCH));
+            }
+            const results = await Promise.all(batches.map(async batch => {
               const list = batch.map((d, idx) => `${idx + 1}. ${d}`).join('\n');
               try {
                 const completion = await groq.chat.completions.create({
@@ -126,18 +123,17 @@ SADECE geçerli JSON döndür, başka hiçbir şey yazma. Format: {"domain.com":
                 });
                 const raw = completion.choices[0].message.content.trim();
                 const jsonMatch = raw.match(/\{[\s\S]*\}/);
-                if (jsonMatch) Object.assign(aiMap, JSON.parse(jsonMatch[0]));
-              } catch (e) { /* devam */ }
-            }
+                return jsonMatch ? JSON.parse(jsonMatch[0]) : {};
+              } catch { return {}; }
+            }));
+            results.forEach(r => Object.assign(aiMap, r));
           }
 
-          // AI sonuçlarını da listeye ekle
           aiDomains.forEach(domain => {
-            const company = aiMap[domain] || domain; // AI bulamazsa domain'i kullan
+            const company = aiMap[domain] || domain;
             needAI[domain].forEach(r => toUpdate.push({ id: r.id, company, domain }));
           });
 
-          // 6. DB güncelle
           let filled = 0;
           await new Promise(resolve => {
             db.serialize(() => {
