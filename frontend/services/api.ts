@@ -114,6 +114,15 @@ export const leadsAPI = {
   deleteApiKey: () => api.delete("/leads/apikey"),
 };
 
+export const deployAPI = {
+  getConfig: () => api.get("/deploy/config"),
+  saveToken: (token: string) => api.post("/deploy/config", { token }),
+  deleteToken: () => api.delete("/deploy/config"),
+  getRuns: () => api.get("/deploy/runs"),
+  getRun: (runId: number) => api.get(`/deploy/runs/${runId}`),
+  getJobs: (runId: number) => api.get(`/deploy/runs/${runId}/jobs`),
+};
+
 export const blacklistAPI = {
   getStats: () => api.get("/lists/stats"),
   getBlacklist: (params?: { q?: string; limit?: number; offset?: number }) =>

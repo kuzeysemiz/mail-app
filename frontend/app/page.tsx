@@ -12,6 +12,7 @@ const EmailManager   = dynamic(() => import("@/components/EmailManager"),   { ss
 const LogViewer      = dynamic(() => import("@/components/LogViewer"),      { ssr: false });
 const DeviceManager    = dynamic(() => import("@/components/DeviceManager"),    { ssr: false });
 const BlacklistManager = dynamic(() => import("@/components/BlacklistManager"), { ssr: false });
+const DeployMonitor    = dynamic(() => import("@/components/DeployMonitor"),    { ssr: false });
 
 const PAGE_TITLES: Record<string, string> = {
   mailbox:   "Gmail Hesapları",
@@ -19,6 +20,7 @@ const PAGE_TITLES: Record<string, string> = {
   manage:    "Mail Listeleri",
   logs:      "Gönderim Logları",
   blacklist: "Kara Liste & Beyaz Liste",
+  deploy:    "Deploy Monitörü",
   devices:   "Bağlı Cihazlar",
 };
 
@@ -110,6 +112,7 @@ export default function Home() {
           {activeTab === "manage"  && <EmailManager />}
           {activeTab === "logs"    && <LogViewer />}
           {activeTab === "blacklist" && <BlacklistManager />}
+          {activeTab === "deploy"    && <DeployMonitor />}
           {activeTab === "devices" && <DeviceManager />}
         </main>
       </div>

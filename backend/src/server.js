@@ -16,6 +16,7 @@ const settingsRoutes = require('./routes/settingsRoutes');
 const aiRoutes      = require('./routes/aiRoutes');
 const leadsRoutes      = require('./routes/leadsRoutes');
 const blacklistRoutes  = require('./routes/blacklistRoutes');
+const deployRoutes     = require('./routes/deployRoutes');
 const bounceDetection  = require('./services/bounceDetectionService');
 
 const app = express();
@@ -43,6 +44,7 @@ app.use('/api/settings',  requireAuth, settingsRoutes);
 app.use('/api/ai',        requireAuth, aiRoutes);
 app.use('/api/leads',     requireAuth, leadsRoutes);
 app.use('/api/lists',     requireAuth, blacklistRoutes);
+app.use('/api/deploy',    requireAuth, deployRoutes);
 
 // Error handling
 app.use((err, req, res, next) => {
