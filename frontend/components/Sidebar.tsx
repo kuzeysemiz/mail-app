@@ -1,14 +1,13 @@
 "use client";
-import { Mail, Plus, List, BarChart2, Monitor, X, ShieldAlert, GitBranch } from "lucide-react";
+import { Mail, Plus, List, BarChart2, Monitor, X, ShieldAlert } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const NAV_ITEMS = [
-  { id: "mailbox", label: "Hesaplar",      icon: Mail },
-  { id: "add",     label: "Mail Ekle",     icon: Plus },
-  { id: "manage",  label: "Yönet",         icon: List },
-  { id: "logs",    label: "Loglar",        icon: BarChart2 },
-  { id: "blacklist", label: "Kara Liste",      icon: ShieldAlert },
-  { id: "deploy",    label: "Deploy",          icon: GitBranch },
+  { id: "mailbox",   label: "Hesaplar",       icon: Mail },
+  { id: "add",       label: "Mail Ekle",      icon: Plus },
+  { id: "manage",    label: "Yönet",          icon: List },
+  { id: "logs",      label: "Loglar",         icon: BarChart2 },
+  { id: "blacklist", label: "Kara Liste",     icon: ShieldAlert },
   { id: "devices",   label: "Bağlı Cihazlar", icon: Monitor },
 ];
 
@@ -80,6 +79,13 @@ export default function Sidebar({ activeTab, onTabChange, isOpen, onClose }: Pro
           <div className="flex items-center gap-2 mb-1">
             <span className="w-2 h-2 rounded-full bg-primary" />
             <span className="text-xs text-muted-foreground">Sistem Aktif</span>
+            <span className="text-muted-foreground/40 text-xs">·</span>
+            <button
+              onClick={() => handleNav("deploy")}
+              className="text-xs text-muted-foreground/60 hover:text-muted-foreground transition-colors"
+            >
+              deploy
+            </button>
           </div>
           <p className="text-xs text-muted-foreground mt-1">© 2026 MailSender</p>
         </div>
