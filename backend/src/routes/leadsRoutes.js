@@ -241,6 +241,25 @@ SADECE geçerli JSON döndür, başka hiçbir şey yazma. Format:
   );
 });
 
+// Rastgele lead seç
+router.get('/random', (req, res) => {
+  const count = Math.min(parseInt(req.query.count) || 10, 500);
+  const excludeSent = req.query.excludeSent === 'true';
+
+  let query = `SELECT * FROM leads WHERE email IS NOT NULL`;
+  if (excludeSent) {
+    query += ` AND email NOT IN (
+      SELECT DISTINCT recipientEmail FROM logs WHERE status IN ('sent','success')
+    )`;
+  }
+  query += ` ORDER BY RANDOM() LIMIT ?`;
+
+  db.all(query, [count], (err, rows) => {
+    if (err) return res.status(500).json({ error: 'Veritabanı hatası' });
+    res.json(rows);
+  });
+});
+
 // Şirkete göre title listesi
 router.get('/titles', (req, res) => {
   const { company } = req.query;

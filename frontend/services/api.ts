@@ -106,6 +106,8 @@ export const leadsAPI = {
   getTags: () => api.get("/leads/tags"),
   autoTag: () => api.post("/leads/auto-tag"),
   fillCompanies: () => api.post("/leads/fill-companies"),
+  getRandom: (count: number, excludeSent: boolean) =>
+    api.get("/leads/random", { params: { count, excludeSent } }),
   import: () => api.post("/leads/import"),
   getApiKey: () => api.get("/leads/apikey"),
   saveApiKey: (apiKey: string) => api.post("/leads/apikey", { apiKey }),

@@ -78,6 +78,9 @@ export default function LeadsModal({ onClose, onSelect }: Props) {
   const [importMsg, setImportMsg]             = useState<{ text: string; type: "success" | "error" } | null>(null);
   const [filling, setFilling]                 = useState(false);
   const [fillMsg, setFillMsg]                 = useState<{ text: string; type: "success" | "error" } | null>(null);
+  const [randomCount, setRandomCount]         = useState(10);
+  const [excludeSent, setExcludeSent]         = useState(true);
+  const [randomLoading, setRandomLoading]     = useState(false);
   const [showImport, setShowImport]           = useState(false);
   const [apiKeyInput, setApiKeyInput]         = useState("");
   const [savedKey, setSavedKey]               = useState<{ saved: boolean; masked?: string }>({ saved: false });
@@ -172,6 +175,19 @@ export default function LeadsModal({ onClose, onSelect }: Props) {
       setFillMsg({ text: err.response?.data?.error || "İşlem başarısız", type: "error" });
     }
     setFilling(false);
+  };
+
+  const handleRandomSelect = async () => {
+    setRandomLoading(true);
+    try {
+      const r = await leadsAPI.getRandom(randomCount, excludeSent);
+      setAllSelected(prev => {
+        const next = new Map(prev);
+        r.data.forEach((lead: Lead) => next.set(lead.id, lead));
+        return next;
+      });
+    } catch {}
+    setRandomLoading(false);
   };
 
   const handleSaveKey = async () => {
@@ -540,21 +556,44 @@ export default function LeadsModal({ onClose, onSelect }: Props) {
         )}
 
         {/* Footer */}
-        <div className="flex items-center justify-between px-6 py-5 border-t border-border">
-          <span className="text-sm text-muted-foreground">
-            {allSelected.size > 0 ? `${allSelected.size} kişi seçildi` : "Kişi seçilmedi"}
-          </span>
+        <div className="flex flex-wrap items-center justify-between gap-3 px-6 py-4 border-t border-border">
+          {/* Sol: rastgele seçim */}
+          <div className="flex flex-wrap items-center gap-2.5">
+            <div className="flex items-center gap-2 px-3 py-2 bg-secondary border border-border rounded-lg">
+              <input
+                type="number" min={1} max={500} value={randomCount}
+                onChange={e => setRandomCount(Math.max(1, parseInt(e.target.value) || 1))}
+                className="w-14 bg-transparent text-sm text-foreground text-center focus:outline-none"
+              />
+              <span className="text-xs text-muted-foreground">kişi</span>
+            </div>
+            <label className="flex items-center gap-1.5 cursor-pointer select-none">
+              <input type="checkbox" checked={excludeSent} onChange={e => setExcludeSent(e.target.checked)}
+                className="accent-primary w-3.5 h-3.5" />
+              <span className="text-xs text-muted-foreground">Gönderilenleri hariç tut</span>
+            </label>
+            <button onClick={handleRandomSelect} disabled={randomLoading}
+              className="flex items-center gap-1.5 px-3 py-2 bg-secondary border border-border text-foreground rounded-lg text-xs font-medium hover:bg-muted disabled:opacity-50 transition-colors">
+              {randomLoading ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
+              Rastgele Seç
+            </button>
+            <span className="text-xs text-muted-foreground">
+              {allSelected.size > 0 ? `${allSelected.size} seçili` : "Seçilmedi"}
+            </span>
+          </div>
+
+          {/* Sağ: stats + butonlar */}
           <div className="flex items-center gap-3">
             {stats && (
-              <span className="text-xs text-muted-foreground px-3 py-1.5 bg-secondary border border-border rounded-lg">
+              <span className="text-xs text-muted-foreground px-3 py-1.5 bg-secondary border border-border rounded-lg whitespace-nowrap">
                 Toplam <span className="font-semibold text-foreground">{stats.total}</span> kişi · <span className="font-semibold text-foreground">{stats.companies}</span> şirket
               </span>
             )}
-            <button onClick={onClose} className="px-5 py-3 bg-secondary border border-border text-foreground rounded-lg text-sm font-medium hover:bg-muted transition-colors">
+            <button onClick={onClose} className="px-5 py-2.5 bg-secondary border border-border text-foreground rounded-lg text-sm font-medium hover:bg-muted transition-colors">
               İptal
             </button>
             <button onClick={handleSelect} disabled={allSelected.size === 0}
-              className="flex items-center gap-2 px-6 py-3 bg-primary text-[oklch(0.11_0.005_260)] rounded-lg text-sm font-semibold hover:opacity-90 disabled:opacity-40 transition-opacity">
+              className="flex items-center gap-2 px-6 py-2.5 bg-primary text-[oklch(0.11_0.005_260)] rounded-lg text-sm font-semibold hover:opacity-90 disabled:opacity-40 transition-opacity">
               <Check size={15} />Seçilenleri Ekle
             </button>
           </div>
