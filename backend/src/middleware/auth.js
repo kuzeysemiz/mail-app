@@ -11,7 +11,9 @@ module.exports = function requireAuth(req, res, next) {
     [token, now],
     (err, session) => {
       if (err || !session) return res.status(401).json({ error: 'Geçersiz veya süresi dolmuş oturum' });
-      req.session = session;
+      req.session  = session;
+      req.userId   = session.userId   || null;
+      req.isAdmin  = session.isAdmin  === 1 || !session.userId; // userId olmayan eski sessionlar admin
       next();
     }
   );

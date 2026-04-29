@@ -17,6 +17,9 @@ const aiRoutes      = require('./routes/aiRoutes');
 const leadsRoutes      = require('./routes/leadsRoutes');
 const blacklistRoutes  = require('./routes/blacklistRoutes');
 const deployRoutes     = require('./routes/deployRoutes');
+const userAuthRoutes   = require('./routes/userAuthRoutes');
+const creditsRoutes    = require('./routes/creditsRoutes');
+const adminRoutes      = require('./routes/adminRoutes');
 const bounceDetection  = require('./services/bounceDetectionService');
 
 const app = express();
@@ -28,7 +31,9 @@ app.use(bodyParser.json({ limit: '50mb' }));
 app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
 
 // Auth routes — kimlik doğrulaması gerektirmez
-app.use('/api/auth', authRoutes);
+app.use('/api/auth',     authRoutes);
+app.use('/api/users',    userAuthRoutes);
+app.use('/api/credits',  creditsRoutes);
 
 // Health check — kimlik doğrulaması gerektirmez
 app.get('/api/health', (req, res) => {
@@ -44,6 +49,7 @@ app.use('/api/settings',  requireAuth, settingsRoutes);
 app.use('/api/ai',        requireAuth, aiRoutes);
 app.use('/api/leads',     requireAuth, leadsRoutes);
 app.use('/api/lists',     requireAuth, blacklistRoutes);
+app.use('/api/admin',     requireAuth, adminRoutes);
 app.use('/api/deploy',    requireAuth, deployRoutes);
 
 // Error handling

@@ -1,5 +1,5 @@
 "use client";
-import { Mail, Plus, List, BarChart2, Monitor, X, ShieldAlert } from "lucide-react";
+import { Mail, Plus, List, BarChart2, Monitor, X, ShieldAlert, Settings2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const NAV_ITEMS = [
@@ -16,9 +16,10 @@ interface Props {
   onTabChange: (tab: string) => void;
   isOpen: boolean;
   onClose: () => void;
+  isAdmin?: boolean;
 }
 
-export default function Sidebar({ activeTab, onTabChange, isOpen, onClose }: Props) {
+export default function Sidebar({ activeTab, onTabChange, isOpen, onClose, isAdmin }: Props) {
   const handleNav = (id: string) => { onTabChange(id); onClose(); };
 
   return (
@@ -72,6 +73,21 @@ export default function Sidebar({ activeTab, onTabChange, isOpen, onClose }: Pro
               {label}
             </button>
           ))}
+
+          {isAdmin && (
+            <button
+              onClick={() => handleNav("admin")}
+              className={cn(
+                "w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors mt-2",
+                activeTab === "admin"
+                  ? "bg-yellow-500/10 text-yellow-500 border border-yellow-500/20"
+                  : "text-muted-foreground hover:bg-secondary hover:text-foreground border border-transparent"
+              )}
+            >
+              <Settings2 size={17} />
+              Admin
+            </button>
+          )}
         </nav>
 
         {/* Footer */}

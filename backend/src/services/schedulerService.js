@@ -88,7 +88,6 @@ class SchedulerService {
   }
 
   async sendScheduledEmail(emailData) {
-    // Gönderim öncesi durumu kontrol et (tekrar gönderimi önle)
     const currentStatus = await new Promise((resolve) => {
       db.get(`SELECT status FROM emails WHERE id = ?`, [emailData.id], (err, row) => {
         resolve(err || !row ? null : row.status);
@@ -98,6 +97,25 @@ class SchedulerService {
     if (currentStatus !== 'pending') {
       logger.info(`Email ${emailData.id} zaten ${currentStatus} durumunda, atlandı`);
       return;
+    }
+
+    // Kredi kontrolü — mailbox'ın userId'si varsa kredi düş
+    const mailboxUserId = await new Promise(r =>
+      db.get(`SELECT userId FROM mailboxes WHERE id = ?`, [emailData.mailboxId], (_, row) => r(row?.userId || null))
+    );
+    if (mailboxUserId) {
+      const credit = await new Promise(r =>
+        db.get(`SELECT balance FROM user_credits WHERE userId = ?`, [mailboxUserId], (_, row) => r(row?.balance ?? 0))
+      );
+      if (credit <= 0) {
+        db.run(`UPDATE emails SET status = 'failed' WHERE id = ?`, [emailData.id]);
+        db.run(
+          `INSERT INTO logs (emailId, mailboxId, recipientEmail, status, errorMessage, sentAt, day) VALUES (?, ?, ?, 'failed', 'Yetersiz kredi', datetime('now'), ?)`,
+          [emailData.id, emailData.mailboxId, emailData.recipientEmail, new Date().toISOString().split('T')[0]]
+        );
+        logger.warn(`Email ${emailData.id} gönderilemedi: yetersiz kredi (userId=${mailboxUserId})`);
+        return;
+      }
     }
 
     try {
@@ -127,6 +145,14 @@ class SchedulerService {
            VALUES (?, ?, ?, datetime('now'), datetime('now', '+24 hours'), 'monitoring')`,
           [emailData.id, emailData.mailboxId, emailData.recipientEmail]
         );
+        // Kredi düş
+        if (mailboxUserId) {
+          db.run(`UPDATE user_credits SET balance = MAX(0, balance - 1) WHERE userId = ?`, [mailboxUserId]);
+          db.run(
+            `INSERT INTO credit_transactions (userId, amount, type, description) VALUES (?, -1, 'send', ?)`,
+            [mailboxUserId, `Mail gönderildi: ${emailData.recipientEmail}`]
+          );
+        }
       } else {
         db.run(
           `INSERT INTO logs (emailId, mailboxId, recipientEmail, status, errorMessage, sentAt, day)

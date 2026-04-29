@@ -3,16 +3,21 @@ import { useState, useEffect } from "react";
 import { Menu } from "lucide-react";
 import Sidebar from "@/components/Sidebar";
 import dynamic from "next/dynamic";
-import { authAPI } from "@/services/api";
+import { userAPI } from "@/services/api";
 
-const LoginScreen    = dynamic(() => import("@/components/LoginScreen"),    { ssr: false });
-const MailboxManager = dynamic(() => import("@/components/MailboxManager"), { ssr: false });
-const EmailAdder     = dynamic(() => import("@/components/EmailAdder"),     { ssr: false });
-const EmailManager   = dynamic(() => import("@/components/EmailManager"),   { ssr: false });
-const LogViewer      = dynamic(() => import("@/components/LogViewer"),      { ssr: false });
-const DeviceManager    = dynamic(() => import("@/components/DeviceManager"),    { ssr: false });
-const BlacklistManager = dynamic(() => import("@/components/BlacklistManager"), { ssr: false });
-const DeployMonitor    = dynamic(() => import("@/components/DeployMonitor"),    { ssr: false });
+const LoginScreen        = dynamic(() => import("@/components/LoginScreen"),        { ssr: false });
+const UserLoginScreen    = dynamic(() => import("@/components/UserLoginScreen"),    { ssr: false });
+const UserRegisterScreen = dynamic(() => import("@/components/UserRegisterScreen"), { ssr: false });
+const MailboxManager     = dynamic(() => import("@/components/MailboxManager"),     { ssr: false });
+const EmailAdder         = dynamic(() => import("@/components/EmailAdder"),         { ssr: false });
+const EmailManager       = dynamic(() => import("@/components/EmailManager"),       { ssr: false });
+const LogViewer          = dynamic(() => import("@/components/LogViewer"),          { ssr: false });
+const BlacklistManager   = dynamic(() => import("@/components/BlacklistManager"),   { ssr: false });
+const DeployMonitor      = dynamic(() => import("@/components/DeployMonitor"),      { ssr: false });
+const DeviceManager      = dynamic(() => import("@/components/DeviceManager"),      { ssr: false });
+const AdminPanel         = dynamic(() => import("@/components/AdminPanel"),         { ssr: false });
+
+type Screen = "loading" | "login" | "register" | "admin-otp" | "app";
 
 const PAGE_TITLES: Record<string, string> = {
   mailbox:   "Gmail Hesapları",
@@ -22,68 +27,87 @@ const PAGE_TITLES: Record<string, string> = {
   blacklist: "Kara Liste & Beyaz Liste",
   deploy:    "Deploy Monitörü",
   devices:   "Bağlı Cihazlar",
+  admin:     "Admin Paneli",
 };
 
 export default function Home() {
-  const [activeTab, setActiveTab]     = useState("mailbox");
+  const [screen, setScreen]         = useState<Screen>("loading");
+  const [activeTab, setActiveTab]   = useState("mailbox");
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  // null = henüz kontrol edilmedi, true = giriş yapıldı, false = giriş yapılmadı
-  const [authed, setAuthed]           = useState<boolean | null>(null);
+  const [isAdmin, setIsAdmin]       = useState(false);
 
   useEffect(() => {
-    checkAuth();
-  }, []);
-
-  const checkAuth = async () => {
     const token  = localStorage.getItem("authToken");
     const expiry = localStorage.getItem("authExpiry");
-
-    if (!token || !expiry) { setAuthed(false); return; }
-
-    // Client-side expiry kontrolü
-    if (new Date(expiry) < new Date()) {
+    if (!token || !expiry || new Date(expiry) < new Date()) {
       localStorage.removeItem("authToken");
       localStorage.removeItem("authExpiry");
-      setAuthed(false);
+      setScreen("login");
       return;
     }
+    userAPI.me()
+      .then(r => {
+        setIsAdmin(r.data.user?.isAdmin === 1 || r.data.user?.isAdmin === true);
+        setScreen("app");
+      })
+      .catch(() => setScreen("login"));
+  }, []);
 
-    // Sunucudan doğrula
-    try {
-      await authAPI.me();
-      setAuthed(true);
-    } catch {
-      localStorage.removeItem("authToken");
-      localStorage.removeItem("authExpiry");
-      setAuthed(false);
-    }
+  const handleUserLogin = (_token: string, _exp: string, user: { isAdmin: number }) => {
+    setIsAdmin(user.isAdmin === 1);
+    setScreen("app");
   };
 
-  const handleLogin = () => setAuthed(true);
+  const handleAdminLogin = () => {
+    setIsAdmin(true);
+    setScreen("app");
+  };
 
-  // Yükleniyor
-  if (authed === null) {
+  const handleTabChange = (tab: string) => {
+    setActiveTab(tab);
+    setSidebarOpen(false);
+  };
+
+  if (screen === "loading") {
     return (
-      <div style={{ minHeight: "100vh", background: "#fff", display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <div style={{ width: 36, height: 36, border: "3px solid #e5e7eb", borderTopColor: "#00c896", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
+      <div style={{ minHeight: "100vh", background: "#07090f", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <div style={{ width: 36, height: 36, border: "3px solid #1a2235", borderTopColor: "#00c896", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
         <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       </div>
     );
   }
 
-  // Giriş yapılmadı
-  if (!authed) {
-    return <LoginScreen onLogin={handleLogin} />;
+  if (screen === "register") {
+    return (
+      <UserRegisterScreen
+        onLogin={() => setScreen("app")}
+        onGoLogin={() => setScreen("login")}
+      />
+    );
   }
 
-  // Ana uygulama
+  if (screen === "admin-otp") {
+    return <LoginScreen onLogin={handleAdminLogin} />;
+  }
+
+  if (screen === "login") {
+    return (
+      <UserLoginScreen
+        onLogin={handleUserLogin}
+        onGoRegister={() => setScreen("register")}
+        onGoAdminLogin={() => setScreen("admin-otp")}
+      />
+    );
+  }
+
   return (
     <div className="flex h-screen overflow-hidden bg-background">
       <Sidebar
         activeTab={activeTab}
-        onTabChange={setActiveTab}
+        onTabChange={handleTabChange}
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
+        isAdmin={isAdmin}
       />
 
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
@@ -107,13 +131,14 @@ export default function Home() {
         </header>
 
         <main className="flex-1 overflow-y-auto p-6 lg:p-8">
-          {activeTab === "mailbox" && <MailboxManager />}
-          {activeTab === "add"     && <EmailAdder />}
-          {activeTab === "manage"  && <EmailManager />}
-          {activeTab === "logs"    && <LogViewer />}
+          {activeTab === "mailbox"   && <MailboxManager />}
+          {activeTab === "add"       && <EmailAdder />}
+          {activeTab === "manage"    && <EmailManager />}
+          {activeTab === "logs"      && <LogViewer />}
           {activeTab === "blacklist" && <BlacklistManager />}
           {activeTab === "deploy"    && <DeployMonitor />}
-          {activeTab === "devices" && <DeviceManager />}
+          {activeTab === "devices"   && <DeviceManager />}
+          {activeTab === "admin"     && <AdminPanel />}
         </main>
       </div>
     </div>

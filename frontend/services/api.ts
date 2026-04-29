@@ -114,6 +114,29 @@ export const leadsAPI = {
   deleteApiKey: () => api.delete("/leads/apikey"),
 };
 
+export const userAPI = {
+  register: (email: string, password: string) => api.post("/users/register", { email, password }),
+  login: (email: string, password: string) => api.post("/users/login", { email, password }),
+  verifyEmail: (token: string) => api.get(`/users/verify-email?token=${token}`),
+  forgotPassword: (email: string) => api.post("/users/forgot-password", { email }),
+  resetPassword: (token: string, password: string) => api.post("/users/reset-password", { token, password }),
+  me: () => api.get("/users/me"),
+};
+
+export const creditsAPI = {
+  getBalance: () => api.get("/credits/balance"),
+  getTransactions: () => api.get("/credits/transactions"),
+  getPackages: () => api.get("/credits/packages"),
+};
+
+export const adminAPI = {
+  getUsers: () => api.get("/admin/users"),
+  updateCredits: (userId: number, amount: number, description?: string) =>
+    api.post(`/admin/users/${userId}/credits`, { amount, description }),
+  toggleAdmin: (userId: number) => api.post(`/admin/users/${userId}/toggle-admin`),
+  getStats: () => api.get("/admin/stats"),
+};
+
 export const deployAPI = {
   getConfig: () => api.get("/deploy/config"),
   saveToken: (token: string) => api.post("/deploy/config", { token }),
