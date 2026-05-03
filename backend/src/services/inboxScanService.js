@@ -29,9 +29,9 @@ async function scanMailbox(mailbox) {
     await client.connect();
     const lock = await client.getMailboxLock('INBOX');
     try {
-      // Son 7 günün okunmamış mesajlarını al
+      // Son 7 günün tüm mesajlarını al (okunmuş/okunmamış fark etmez)
       const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-      const uids = await client.search({ since, seen: false }, { uid: true }).catch(() => []);
+      const uids = await client.search({ since }, { uid: true }).catch(() => []);
       if (uids.length === 0) return 0;
 
       const recipients = await getKnownRecipients(mailbox.userId);
@@ -96,13 +96,13 @@ async function scanAll() {
   return total;
 }
 
-// Her 5 dakikada bir tara
+// Her 30 saniyede bir tara
 function startSchedule() {
   setTimeout(async () => {
     await scanAll().catch(e => logger.error(`Inbox scan hatası: ${e.message}`));
     setInterval(async () => {
       await scanAll().catch(e => logger.error(`Inbox scan hatası: ${e.message}`));
-    }, 5 * 60 * 1000);
+    }, 30 * 1000);
   }, 30 * 1000); // İlk taramayı 30sn geciktir (DB hazır olsun)
 }
 
