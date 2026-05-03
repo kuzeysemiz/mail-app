@@ -15,9 +15,11 @@ function mbFilter(req, alias = 'e') {
 }
 
 function ownMailbox(req, mailboxId) {
-  return new Promise(resolve =>
-    db.get(`SELECT id FROM mailboxes WHERE id = ? AND userId = ?`, [mailboxId, req.userId], (_, r) => resolve(!!r))
-  );
+  const query = req.userId
+    ? `SELECT id FROM mailboxes WHERE id = ? AND userId = ?`
+    : `SELECT id FROM mailboxes WHERE id = ? AND userId IS NULL`;
+  const params = req.userId ? [mailboxId, req.userId] : [mailboxId];
+  return new Promise(resolve => db.get(query, params, (_, r) => resolve(!!r)));
 }
 
 // Toplu email ekle

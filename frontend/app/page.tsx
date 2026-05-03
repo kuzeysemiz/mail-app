@@ -37,6 +37,7 @@ export default function Home() {
   const [activeTab, setActiveTab]   = useState("mailbox");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isAdmin, setIsAdmin]       = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<number | null>(null);
   const [credits, setCredits]       = useState<number | null>(null);
 
   useEffect(() => {
@@ -51,14 +52,16 @@ export default function Home() {
     userAPI.me()
       .then(r => {
         setIsAdmin(r.data.user?.isAdmin === 1 || r.data.user?.isAdmin === true);
+        setCurrentUserId(r.data.user?.id ?? null);
         if (typeof r.data.credits === 'number') setCredits(r.data.credits);
         setScreen("app");
       })
       .catch(() => setScreen("login"));
   }, []);
 
-  const handleUserLogin = (_token: string, _exp: string, user: { isAdmin: number }) => {
+  const handleUserLogin = (_token: string, _exp: string, user: { id: number; isAdmin: number }) => {
     setIsAdmin(user.isAdmin === 1);
+    setCurrentUserId(user.id ?? null);
     setScreen("app");
   };
 
@@ -143,7 +146,7 @@ export default function Home() {
           {activeTab === "blacklist" && <BlacklistManager />}
           {activeTab === "deploy"    && <DeployMonitor />}
           {activeTab === "devices"   && <DeviceManager />}
-          {activeTab === "admin"     && <AdminPanel />}
+          {activeTab === "admin"     && <AdminPanel currentUserId={currentUserId} />}
           {activeTab === "credits"   && <CreditsPanel onCreditsChange={setCredits} />}
         </main>
       </div>

@@ -28,7 +28,7 @@ function parsePermissions(raw: string | null): string[] | null {
   try { return JSON.parse(raw); } catch { return []; }
 }
 
-export default function AdminPanel() {
+export default function AdminPanel({ currentUserId }: { currentUserId?: number | null }) {
   const [users, setUsers]     = useState<User[]>([]);
   const [stats, setStats]     = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -331,12 +331,16 @@ export default function AdminPanel() {
               <div className="divide-y divide-border">
                 {filtered.map(user => {
                   const perms = parsePermissions(user.permissions);
+                  const isSelf = currentUserId !== null && currentUserId !== undefined && user.id === currentUserId;
                   return (
-                    <div key={user.id} className="flex items-center gap-4 px-5 py-3.5 hover:bg-secondary/20 transition-colors">
+                    <div key={user.id} className={`flex items-center gap-4 px-5 py-3.5 transition-colors ${isSelf ? "bg-primary/5 border-l-2 border-primary" : "hover:bg-secondary/20"}`}>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
                           <p className="text-sm font-medium text-foreground truncate">{user.email}</p>
-                          {user.isAdmin === 1 && (
+                          {isSelf && (
+                            <span className="text-[10px] bg-primary/15 text-primary px-2 py-0.5 rounded-full font-semibold shrink-0">Yönetici (Siz)</span>
+                          )}
+                          {!isSelf && user.isAdmin === 1 && (
                             <span className="text-[10px] bg-yellow-500/15 text-yellow-500 px-1.5 py-0.5 rounded-full shrink-0">
                               {perms === null ? "süper admin" : "admin"}
                             </span>
@@ -354,29 +358,33 @@ export default function AdminPanel() {
                           )}
                         </p>
                       </div>
-                      <div className="flex items-center gap-1 shrink-0">
-                        <button
-                          onClick={() => { setCreditModal({ userId: user.id, email: user.email }); setCreditAmount(""); setCreditDesc(""); setCreditSent(false); }}
-                          className="p-2 border border-border rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
-                          title="Kredi Güncelle"
-                        >
-                          <Coins size={13} />
-                        </button>
-                        <button
-                          onClick={() => openPermModal(user)}
-                          className="p-2 border border-border rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
-                          title="Yetki Yönet"
-                        >
-                          <Shield size={13} />
-                        </button>
-                        <button
-                          onClick={() => { setDeleteModal({ userId: user.id, email: user.email }); setDeleteStep("confirm"); setDeleteOtp(""); setDeleteError(""); }}
-                          className="p-2 border border-destructive/30 rounded-lg text-destructive/60 hover:text-destructive hover:bg-destructive/10 transition-colors"
-                          title="Kullanıcıyı Sil"
-                        >
-                          <Trash2 size={13} />
-                        </button>
-                      </div>
+                      {isSelf ? (
+                        <span className="text-xs text-muted-foreground/50 shrink-0 italic">değiştirilemez</span>
+                      ) : (
+                        <div className="flex items-center gap-1 shrink-0">
+                          <button
+                            onClick={() => { setCreditModal({ userId: user.id, email: user.email }); setCreditAmount(""); setCreditDesc(""); setCreditSent(false); }}
+                            className="p-2 border border-border rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+                            title="Kredi Güncelle"
+                          >
+                            <Coins size={13} />
+                          </button>
+                          <button
+                            onClick={() => openPermModal(user)}
+                            className="p-2 border border-border rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+                            title="Yetki Yönet"
+                          >
+                            <Shield size={13} />
+                          </button>
+                          <button
+                            onClick={() => { setDeleteModal({ userId: user.id, email: user.email }); setDeleteStep("confirm"); setDeleteOtp(""); setDeleteError(""); }}
+                            className="p-2 border border-destructive/30 rounded-lg text-destructive/60 hover:text-destructive hover:bg-destructive/10 transition-colors"
+                            title="Kullanıcıyı Sil"
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
+                      )}
                     </div>
                   );
                 })}

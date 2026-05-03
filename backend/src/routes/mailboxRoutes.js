@@ -23,7 +23,11 @@ router.post('/mailbox', (req, res) => {
 });
 
 router.get('/mailboxes', (req, res) => {
-  db.all(`SELECT id, email, createdAt FROM mailboxes WHERE userId = ? ORDER BY createdAt DESC`, [req.userId], (err, rows) => {
+  const query = req.userId
+    ? `SELECT id, email, createdAt FROM mailboxes WHERE userId = ? ORDER BY createdAt DESC`
+    : `SELECT id, email, createdAt FROM mailboxes WHERE userId IS NULL ORDER BY createdAt DESC`;
+  const params = req.userId ? [req.userId] : [];
+  db.all(query, params, (err, rows) => {
     if (err) return res.status(500).json({ error: 'Veritabanı hatası' });
     res.json(rows);
   });
