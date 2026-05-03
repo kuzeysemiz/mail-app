@@ -60,6 +60,7 @@ router.post('/register', async (req, res) => {
   const { email, password } = req.body;
   if (!email || !password) return res.status(400).json({ error: 'Email ve şifre zorunlu' });
   if (password.length < 6) return res.status(400).json({ error: 'Şifre en az 6 karakter olmalı' });
+  if (!email.trim().toLowerCase().endsWith('@gmail.com')) return res.status(400).json({ error: 'Sadece Gmail adresleri kabul edilmektedir' });
 
   const passwordHash = await bcrypt.hash(password, 10);
   const verificationToken = randomToken();

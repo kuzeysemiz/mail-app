@@ -23,9 +23,7 @@ router.post('/mailbox', (req, res) => {
 });
 
 router.get('/mailboxes', (req, res) => {
-  const where = req.isAdmin ? '' : 'WHERE userId = ?';
-  const params = req.isAdmin ? [] : [req.userId];
-  db.all(`SELECT id, email, createdAt FROM mailboxes ${where} ORDER BY createdAt DESC`, params, (err, rows) => {
+  db.all(`SELECT id, email, createdAt FROM mailboxes WHERE userId = ? ORDER BY createdAt DESC`, [req.userId], (err, rows) => {
     if (err) return res.status(500).json({ error: 'Veritabanı hatası' });
     res.json(rows);
   });

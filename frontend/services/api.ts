@@ -132,10 +132,16 @@ export const creditsAPI = {
 
 export const adminAPI = {
   getUsers: () => api.get("/admin/users"),
+  getStats: () => api.get("/admin/stats"),
+  toggleAdmin: (userId: number) => api.post(`/admin/users/${userId}/toggle-admin`),
+  deleteUser: (userId: number) => api.delete(`/admin/users/${userId}`),
+  confirmDeleteUser: (userId: number, otp: string, actionId: number) =>
+    api.post(`/admin/users/${userId}/delete-confirm`, { otp, actionId }),
   updateCredits: (userId: number, amount: number, description?: string) =>
     api.post(`/admin/users/${userId}/credits`, { amount, description }),
-  toggleAdmin: (userId: number) => api.post(`/admin/users/${userId}/toggle-admin`),
-  getStats: () => api.get("/admin/stats"),
+  getPermissions: (userId: number) => api.get(`/admin/users/${userId}/permissions`),
+  setPermissions: (userId: number, permissions: string[] | null) =>
+    api.post(`/admin/users/${userId}/permissions`, { permissions }),
 };
 
 export const paddleAPI = {

@@ -21,7 +21,7 @@ export default function UserRegisterScreen({ onLogin, onGoLogin }: Props) {
     setError("");
     setLoading(true);
     try {
-      await userAPI.register(email.trim(), password);
+      await userAPI.register(`${email.trim().toLowerCase()}@gmail.com`, password);
       setDone(true);
     } catch (e: unknown) {
       const msg = (e as { response?: { data?: { error?: string } } })?.response?.data?.error;
@@ -68,14 +68,19 @@ export default function UserRegisterScreen({ onLogin, onGoLogin }: Props) {
         {/* Form */}
         <div className="bg-card border border-border rounded-2xl p-6 space-y-4">
           <div className="space-y-1.5">
-            <label className="text-xs font-medium text-muted-foreground">E-posta</label>
-            <input
-              type="email"
-              value={email}
-              onChange={e => setEmail(e.target.value)}
-              placeholder="ornek@sirket.com"
-              className="w-full px-3.5 py-2.5 bg-input border border-border rounded-lg text-sm outline-none focus:ring-1 focus:ring-ring placeholder:text-muted-foreground"
-            />
+            <label className="text-xs font-medium text-muted-foreground">Gmail Adresi</label>
+            <div className="flex items-center bg-input border border-border rounded-lg overflow-hidden focus-within:ring-1 focus-within:ring-ring">
+              <input
+                type="text"
+                value={email}
+                onChange={e => setEmail(e.target.value.replace(/@.*/, "").replace(/\s/g, ""))}
+                placeholder="kullanici.adi"
+                className="flex-1 px-3.5 py-2.5 bg-transparent text-sm outline-none placeholder:text-muted-foreground min-w-0"
+              />
+              <span className="px-3 py-2.5 bg-secondary text-muted-foreground text-sm select-none shrink-0 border-l border-border">
+                @gmail.com
+              </span>
+            </div>
           </div>
 
           <div className="space-y-1.5">

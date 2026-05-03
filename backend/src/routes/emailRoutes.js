@@ -15,7 +15,6 @@ function mbFilter(req, alias = 'e') {
 }
 
 function ownMailbox(req, mailboxId) {
-  if (req.isAdmin) return Promise.resolve(true);
   return new Promise(resolve =>
     db.get(`SELECT id FROM mailboxes WHERE id = ? AND userId = ?`, [mailboxId, req.userId], (_, r) => resolve(!!r))
   );

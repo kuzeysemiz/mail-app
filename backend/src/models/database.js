@@ -301,6 +301,31 @@ db.serialize(() => {
       FOREIGN KEY (emailId) REFERENCES emails(id) ON DELETE CASCADE
     )
   `);
+
+  // pending_admin_actions: silme OTP + kredi onay linkleri
+  db.run(`
+    CREATE TABLE IF NOT EXISTS pending_admin_actions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      adminId INTEGER NOT NULL,
+      action TEXT NOT NULL,
+      targetId INTEGER,
+      data TEXT,
+      token TEXT UNIQUE,
+      otp TEXT,
+      expiresAt DATETIME NOT NULL,
+      createdAt DATETIME DEFAULT (datetime('now'))
+    )
+  `);
+
+  // schema_v3: users.permissions kolonu
+  db.get(`SELECT value FROM settings WHERE key = 'schema_v3'`, (err, row) => {
+    if (row) return;
+    db.serialize(() => {
+      db.run(`ALTER TABLE users ADD COLUMN permissions TEXT`, () => {});
+      db.run(`INSERT OR IGNORE INTO settings (key, value) VALUES ('schema_v3', 'done')`);
+    });
+  });
+  db.run(`ALTER TABLE users ADD COLUMN permissions TEXT`, () => {});
 });
 
 module.exports = db;
