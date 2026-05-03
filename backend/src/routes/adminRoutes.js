@@ -81,7 +81,13 @@ router.get('/users', requireAuth, requireAdmin, requirePerm('users'), (req, res)
      ORDER BY u.createdAt DESC`,
     (err, rows) => {
       if (err) return res.status(500).json({ error: 'Veritabanı hatası' });
-      res.json(rows);
+      // userId=NULL mailbox'ları varsa kurucu yöneticiyi listenin başına ekle
+      db.get(`SELECT email FROM mailboxes WHERE userId IS NULL LIMIT 1`, (_, mb) => {
+        const result = mb
+          ? [{ id: null, email: mb.email, isAdmin: 1, emailVerified: 1, createdAt: null, credits: null, permissions: null, isFounder: true }, ...rows]
+          : rows;
+        res.json(result);
+      });
     }
   );
 });

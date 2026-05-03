@@ -4,13 +4,14 @@ import { Users, Coins, Mail, RefreshCw, Plus, Minus, ShieldCheck, Settings, Tras
 import { adminAPI, paddleAPI, creditsAPI } from "@/services/api";
 
 type User = {
-  id: number;
+  id: number | null;
   email: string;
   isAdmin: number;
   emailVerified: number;
-  createdAt: string;
-  credits: number;
+  createdAt: string | null;
+  credits: number | null;
   permissions: string | null;
+  isFounder?: boolean;
 };
 type Stats = { totalUsers: number; verifiedUsers: number; totalCredits: number; totalEmailsSent: number };
 type Package = { id: number; name: string; slug: string; emailCount: number | null; price: number | null; paddlePriceId: string | null };
@@ -329,11 +330,12 @@ export default function AdminPanel({ currentUserId }: { currentUserId?: number |
               <div className="flex items-center justify-center py-12 text-muted-foreground text-sm">Kullanıcı bulunamadı</div>
             ) : (
               <div className="divide-y divide-border">
-                {filtered.map(user => {
+                {filtered.map((user, idx) => {
                   const perms = parsePermissions(user.permissions);
-                  const isSelf = currentUserId !== null && currentUserId !== undefined && user.id === currentUserId;
+                  const isSelf = currentUserId != null && user.id === currentUserId;
+                  const isLocked = isSelf || user.isFounder;
                   return (
-                    <div key={user.id} className={`flex items-center gap-4 px-5 py-3.5 transition-colors ${isSelf ? "bg-primary/5 border-l-2 border-primary" : "hover:bg-secondary/20"}`}>
+                    <div key={user.id ?? `founder-${idx}`} className={`flex items-center gap-4 px-5 py-3.5 transition-colors ${isSelf ? "bg-primary/5 border-l-2 border-primary" : user.isFounder ? "bg-secondary/30" : "hover:bg-secondary/20"}`}>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
                           <p className="text-sm font-medium text-foreground truncate">{user.email}</p>
@@ -350,7 +352,8 @@ export default function AdminPanel({ currentUserId }: { currentUserId?: number |
                           )}
                         </div>
                         <p className="text-xs text-muted-foreground mt-0.5">
-                          {new Date(user.createdAt).toLocaleDateString("tr-TR")} · {user.credits} kredi
+                          {user.createdAt ? new Date(user.createdAt).toLocaleDateString("tr-TR") : "—"}
+                          {user.credits !== null ? ` · ${user.credits} kredi` : ""}
                           {user.isAdmin === 1 && perms !== null && perms.length > 0 && (
                             <span className="ml-1 text-muted-foreground/60">
                               · {perms.map(p => PERM_LABELS[p] || p).join(", ")}
@@ -358,26 +361,26 @@ export default function AdminPanel({ currentUserId }: { currentUserId?: number |
                           )}
                         </p>
                       </div>
-                      {isSelf ? (
-                        <span className="text-xs text-muted-foreground/50 shrink-0 italic">değiştirilemez</span>
+                      {isLocked ? (
+                        <span className="text-[11px] font-bold text-red-500 tracking-wide shrink-0">YÖNETİCİ</span>
                       ) : (
                         <div className="flex items-center gap-1 shrink-0">
                           <button
-                            onClick={() => { setCreditModal({ userId: user.id, email: user.email }); setCreditAmount(""); setCreditDesc(""); setCreditSent(false); }}
+                            onClick={() => { setCreditModal({ userId: user.id!, email: user.email }); setCreditAmount(""); setCreditDesc(""); setCreditSent(false); }}
                             className="p-2 border border-border rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
                             title="Kredi Güncelle"
                           >
                             <Coins size={13} />
                           </button>
                           <button
-                            onClick={() => openPermModal(user)}
+                            onClick={() => openPermModal(user as User & { id: number })}
                             className="p-2 border border-border rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
                             title="Yetki Yönet"
                           >
                             <Shield size={13} />
                           </button>
                           <button
-                            onClick={() => { setDeleteModal({ userId: user.id, email: user.email }); setDeleteStep("confirm"); setDeleteOtp(""); setDeleteError(""); }}
+                            onClick={() => { setDeleteModal({ userId: user.id!, email: user.email }); setDeleteStep("confirm"); setDeleteOtp(""); setDeleteError(""); }}
                             className="p-2 border border-destructive/30 rounded-lg text-destructive/60 hover:text-destructive hover:bg-destructive/10 transition-colors"
                             title="Kullanıcıyı Sil"
                           >
