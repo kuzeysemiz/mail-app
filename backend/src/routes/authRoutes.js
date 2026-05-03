@@ -194,9 +194,13 @@ router.get('/me', requireAuth, (req, res) => {
 
 // GET /api/auth/sessions
 router.get('/sessions', requireAuth, (req, res) => {
+  const [clause, params] = req.userId
+    ? ['AND userId = ?', [req.userId]]
+    : ['AND userId IS NULL', []];
   db.all(
     `SELECT id, deviceId, deviceName, ipAddress, createdAt, expiresAt
-     FROM sessions WHERE isActive = 1 ORDER BY createdAt DESC`,
+     FROM sessions WHERE isActive = 1 ${clause} ORDER BY createdAt DESC`,
+    params,
     (err, rows) => {
       if (err) return res.status(500).json({ error: err.message });
       res.json(rows);
@@ -206,11 +210,19 @@ router.get('/sessions', requireAuth, (req, res) => {
 
 // DELETE /api/auth/sessions/:id
 router.delete('/sessions/:id', requireAuth, (req, res) => {
-  db.run('UPDATE sessions SET isActive = 0 WHERE id = ?', [req.params.id], (err) => {
-    if (err) return res.status(500).json({ error: err.message });
-    logger.info(`Oturum kapatıldı: ${req.params.id}`);
-    res.json({ success: true });
-  });
+  const [clause, params] = req.userId
+    ? ['AND userId = ?', [req.userId]]
+    : ['AND userId IS NULL', []];
+  db.run(
+    `UPDATE sessions SET isActive = 0 WHERE id = ? ${clause}`,
+    [req.params.id, ...params],
+    function(err) {
+      if (err) return res.status(500).json({ error: err.message });
+      if (this.changes === 0) return res.status(403).json({ error: 'Bu oturumu kapatma yetkiniz yok' });
+      logger.info(`Oturum kapatıldı: ${req.params.id}`);
+      res.json({ success: true });
+    }
+  );
 });
 
 // Logout — mevcut token'ı geçersiz kıl
