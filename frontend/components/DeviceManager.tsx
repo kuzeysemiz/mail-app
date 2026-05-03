@@ -105,16 +105,16 @@ export default function DeviceManager() {
               const isCurrent = session.deviceId === currentDeviceId;
               const expired   = isExpired(session.expiresAt);
               return (
-                <div key={session.id} className="flex items-center justify-between p-5 bg-secondary rounded-xl border border-border/50">
+                <div key={session.id} className={`flex items-center justify-between p-5 rounded-xl border ${isCurrent ? "bg-primary/5 border-primary/40" : "bg-secondary border-border/50"}`}>
                   <div className="flex items-center gap-4 min-w-0">
-                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${isCurrent ? "bg-primary/15" : "bg-secondary"}`} style={{ border: "1px solid var(--border)" }}>
+                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${isCurrent ? "bg-primary/20 border-primary/30" : "bg-secondary border-border"}`} style={{ border: "1px solid" }}>
                       <Monitor size={18} className={isCurrent ? "text-primary" : "text-muted-foreground"} />
                     </div>
                     <div className="min-w-0">
                       <div className="flex items-center gap-2 mb-1">
-                        <p className="text-sm font-medium text-foreground truncate">{session.deviceName || "Bilinmeyen Cihaz"}</p>
+                        <p className={`text-sm font-medium truncate ${isCurrent ? "text-primary" : "text-foreground"}`}>{session.deviceName || "Bilinmeyen Cihaz"}</p>
                         {isCurrent && (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-primary/10 text-primary border border-primary/20 rounded-full text-xs font-medium shrink-0">
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-primary/20 text-primary border border-primary/30 rounded-full text-xs font-semibold shrink-0">
                             <ShieldCheck size={10} />Bu cihaz
                           </span>
                         )}
