@@ -22,11 +22,11 @@ const QUILL_MODULES = {
 const QUILL_FORMATS = ["header","bold","italic","underline","strike","blockquote","code-block","list","bullet","color","background","link","image"];
 
 // Gönderim öncesi: style'daki width'e göre görseli canvas'ta gerçek boyuta küçült
-async function resizeBase64(src: string, targetW: number): Promise<string> {
+async function resizeBase64(src: string, maxW: number): Promise<string> {
   return new Promise(resolve => {
     const img = new Image();
     img.onload = () => {
-      const w = Math.max(1, targetW);
+      const w = Math.min(img.naturalWidth, maxW);
       const h = Math.max(1, Math.round(w * img.naturalHeight / img.naturalWidth));
       const c = document.createElement("canvas");
       c.width = w; c.height = h;
@@ -40,22 +40,18 @@ async function resizeBase64(src: string, targetW: number): Promise<string> {
   });
 }
 
-async function bakeImageSizes(html: string, emailWidth = 600): Promise<string> {
+const IMAGE_MAX_WIDTH = 300;
+
+async function bakeImageSizes(html: string): Promise<string> {
   if (typeof document === "undefined") return html;
   const div = document.createElement("div");
   div.innerHTML = html;
   for (const img of Array.from(div.querySelectorAll("img"))) {
     const src = img.getAttribute("src") || "";
     if (!src.startsWith("data:image")) continue;
-    const w = img.style.width;
-    if (!w) continue;
-    const targetW = w.endsWith("%")
-      ? Math.round(parseFloat(w) / 100 * emailWidth)
-      : w.endsWith("px") ? Math.round(parseFloat(w)) : 0;
-    if (targetW < 1) continue;
-    const resized = await resizeBase64(src, targetW);
+    const resized = await resizeBase64(src, IMAGE_MAX_WIDTH);
     img.setAttribute("src", resized);
-    img.style.width = `${targetW}px`;
+    img.style.width = `${IMAGE_MAX_WIDTH}px`;
     img.style.height = "auto";
     img.style.maxWidth = "100%";
   }
