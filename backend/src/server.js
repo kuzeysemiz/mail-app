@@ -22,6 +22,8 @@ const creditsRoutes    = require('./routes/creditsRoutes');
 const adminRoutes      = require('./routes/adminRoutes');
 const paddle           = require('./routes/paddleRoutes');
 const bounceDetection  = require('./services/bounceDetectionService');
+const inboxRoutes      = require('./routes/inboxRoutes');
+const inboxScan        = require('./services/inboxScanService');
 
 const app = express();
 const PORT = process.env.PORT || 10001;
@@ -56,6 +58,7 @@ app.use('/api/lists',     requireAuth, blacklistRoutes);
 app.use('/api/admin',     requireAuth, adminRoutes);
 app.use('/api/deploy',    requireAuth, deployRoutes);
 app.use('/api/paddle',    requireAuth, paddle.router);
+app.use('/api/inbox',     requireAuth, inboxRoutes);
 
 // Error handling
 app.use((err, req, res, next) => {
@@ -70,6 +73,7 @@ app.use((req, res) => {
 
 app.listen(PORT, () => {
   bounceDetection.start();
+  inboxScan.startSchedule();
   logger.info(`Server ${PORT} portunda başlatıldı`);
   console.log(`✓ Backend çalışıyor: http://localhost:${PORT}`);
   console.log(`✓ Veritabanı: mail_scheduler.db`);

@@ -176,4 +176,20 @@ export const blacklistAPI = {
   scanBounces: () => api.post("/lists/scan-bounces"),
 };
 
+export const inboxAPI = {
+  getUnreadCount: () => api.get("/inbox/unread-count"),
+  getMessages: (params?: { page?: number; limit?: number; unreadOnly?: boolean }) =>
+    api.get("/inbox/", { params }),
+  getMessage: (id: number) => api.get(`/inbox/${id}`),
+  markRead: (id: number) => api.put(`/inbox/${id}/read`),
+  markAllRead: () => api.put("/inbox/read-all"),
+  reply: (id: number, body: string) => api.post(`/inbox/${id}/reply`, { body }),
+  delete: (id: number) => api.delete(`/inbox/${id}`),
+  scan: () => api.post("/inbox/scan"),
+};
+
+export const authSessionAPI = {
+  logout: () => api.post("/auth/logout").catch(() => {}),
+};
+
 export default api;

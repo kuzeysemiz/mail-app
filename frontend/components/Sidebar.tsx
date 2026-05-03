@@ -1,5 +1,5 @@
 "use client";
-import { Mail, Plus, List, BarChart2, Monitor, X, ShieldAlert, Settings2, Coins } from "lucide-react";
+import { Mail, Plus, List, BarChart2, Monitor, X, ShieldAlert, Settings2, Coins, Inbox } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const NAV_ITEMS = [
@@ -7,6 +7,7 @@ const NAV_ITEMS = [
   { id: "add",       label: "Mail Ekle",      icon: Plus },
   { id: "manage",    label: "Yönet",          icon: List },
   { id: "logs",      label: "Loglar",         icon: BarChart2 },
+  { id: "inbox",     label: "Gelen Kutusu",   icon: Inbox },
   { id: "blacklist", label: "Kara Liste",     icon: ShieldAlert },
   { id: "devices",   label: "Bağlı Cihazlar", icon: Monitor },
   { id: "credits",   label: "Krediler",       icon: Coins },
@@ -19,9 +20,10 @@ interface Props {
   onClose: () => void;
   isAdmin?: boolean;
   credits?: number | null;
+  unreadInbox?: number;
 }
 
-export default function Sidebar({ activeTab, onTabChange, isOpen, onClose, isAdmin, credits }: Props) {
+export default function Sidebar({ activeTab, onTabChange, isOpen, onClose, isAdmin, credits, unreadInbox }: Props) {
   const handleNav = (id: string) => { onTabChange(id); onClose(); };
 
   return (
@@ -73,6 +75,11 @@ export default function Sidebar({ activeTab, onTabChange, isOpen, onClose, isAdm
             >
               <Icon size={17} />
               <span className="flex-1 text-left">{label}</span>
+              {id === "inbox" && (unreadInbox ?? 0) > 0 && (
+                <span className="text-[10px] bg-red-500 text-white px-1.5 py-0.5 rounded-full shrink-0 font-semibold min-w-[18px] text-center">
+                  {unreadInbox! > 99 ? "99+" : unreadInbox}
+                </span>
+              )}
               {id === "credits" && !isAdmin && credits !== null && credits !== undefined && (
                 <span className="text-[10px] bg-yellow-500/15 text-yellow-500 px-1.5 py-0.5 rounded-full shrink-0">
                   {credits.toLocaleString("tr-TR")}

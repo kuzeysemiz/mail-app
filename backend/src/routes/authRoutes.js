@@ -213,4 +213,11 @@ router.delete('/sessions/:id', requireAuth, (req, res) => {
   });
 });
 
+// Logout — mevcut token'ı geçersiz kıl
+router.post('/logout', requireAuth, (req, res) => {
+  const token = req.headers['authorization']?.split(' ')[1];
+  if (token) db.run(`UPDATE sessions SET isActive = 0 WHERE token = ?`, [token]);
+  res.json({ success: true });
+});
+
 module.exports = router;

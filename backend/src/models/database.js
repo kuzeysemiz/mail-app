@@ -317,6 +317,26 @@ db.serialize(() => {
     )
   `);
 
+  // inbox_messages: gelen kutusu
+  db.run(`
+    CREATE TABLE IF NOT EXISTS inbox_messages (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      mailboxId INTEGER NOT NULL,
+      userId INTEGER,
+      fromEmail TEXT NOT NULL,
+      fromName TEXT,
+      subject TEXT,
+      bodyText TEXT,
+      bodyHtml TEXT,
+      receivedAt DATETIME,
+      isRead INTEGER DEFAULT 0,
+      messageId TEXT,
+      inReplyTo TEXT,
+      createdAt DATETIME DEFAULT (datetime('now')),
+      UNIQUE(mailboxId, messageId)
+    )
+  `);
+
   // schema_v3: users.permissions kolonu
   db.get(`SELECT value FROM settings WHERE key = 'schema_v3'`, (err, row) => {
     if (row) return;

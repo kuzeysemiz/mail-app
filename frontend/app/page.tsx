@@ -1,9 +1,10 @@
 "use client";
-import { useState, useEffect } from "react";
-import { Menu } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { Menu, Bell, LogOut } from "lucide-react";
 import Sidebar from "@/components/Sidebar";
 import dynamic from "next/dynamic";
-import { userAPI } from "@/services/api";
+import { cn } from "@/lib/utils";
+import { userAPI, inboxAPI, authSessionAPI } from "@/services/api";
 
 const LoginScreen        = dynamic(() => import("@/components/LoginScreen"),        { ssr: false });
 const UserLoginScreen    = dynamic(() => import("@/components/UserLoginScreen"),    { ssr: false });
@@ -17,6 +18,7 @@ const DeployMonitor      = dynamic(() => import("@/components/DeployMonitor"),  
 const DeviceManager      = dynamic(() => import("@/components/DeviceManager"),      { ssr: false });
 const AdminPanel         = dynamic(() => import("@/components/AdminPanel"),         { ssr: false });
 const CreditsPanel       = dynamic(() => import("@/components/CreditsPanel"),       { ssr: false });
+const InboxPanel         = dynamic(() => import("@/components/InboxPanel"),         { ssr: false });
 
 type Screen = "loading" | "login" | "register" | "admin-otp" | "app";
 
@@ -25,6 +27,7 @@ const PAGE_TITLES: Record<string, string> = {
   add:       "Mail Ekle",
   manage:    "Mail Listeleri",
   logs:      "Gönderim Logları",
+  inbox:     "Gelen Kutusu",
   blacklist: "Kara Liste & Beyaz Liste",
   deploy:    "Deploy Monitörü",
   devices:   "Bağlı Cihazlar",
@@ -39,6 +42,8 @@ export default function Home() {
   const [isAdmin, setIsAdmin]       = useState(false);
   const [currentUserId, setCurrentUserId] = useState<number | null>(null);
   const [credits, setCredits]       = useState<number | null>(null);
+  const [unreadInbox, setUnreadInbox] = useState(0);
+  const inboxPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     const token  = localStorage.getItem("authToken");
@@ -59,6 +64,14 @@ export default function Home() {
       .catch(() => setScreen("login"));
   }, []);
 
+  useEffect(() => {
+    if (screen !== "app") return;
+    const poll = () => inboxAPI.getUnreadCount().then(r => setUnreadInbox(r.data.count ?? 0)).catch(() => {});
+    poll();
+    inboxPollRef.current = setInterval(poll, 30_000);
+    return () => { if (inboxPollRef.current) clearInterval(inboxPollRef.current); };
+  }, [screen]);
+
   const handleUserLogin = (_token: string, _exp: string, user: { id: number; isAdmin: number }) => {
     setIsAdmin(user.isAdmin === 1);
     setCurrentUserId(user.id ?? null);
@@ -73,6 +86,14 @@ export default function Home() {
   const handleTabChange = (tab: string) => {
     setActiveTab(tab);
     setSidebarOpen(false);
+    if (tab === "inbox") setUnreadInbox(0);
+  };
+
+  const handleLogout = async () => {
+    await authSessionAPI.logout();
+    localStorage.removeItem("authToken");
+    localStorage.removeItem("authExpiry");
+    setScreen("login");
   };
 
   if (screen === "loading") {
@@ -116,6 +137,7 @@ export default function Home() {
         onClose={() => setSidebarOpen(false)}
         isAdmin={isAdmin}
         credits={credits}
+        unreadInbox={unreadInbox}
       />
 
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
@@ -132,13 +154,33 @@ export default function Home() {
               <span className="text-foreground font-medium">{PAGE_TITLES[activeTab]}</span>
             </p>
           </div>
-          <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-primary" />
-            <span className="text-sm text-muted-foreground">Aktif</span>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => handleTabChange("inbox")}
+              className="relative p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+              title="Gelen Kutusu"
+            >
+              <Bell size={18} />
+              {unreadInbox > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center px-0.5">
+                  {unreadInbox > 99 ? "99+" : unreadInbox}
+                </span>
+              )}
+            </button>
+            <button
+              onClick={handleLogout}
+              className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+              title="Çıkış Yap"
+            >
+              <LogOut size={18} />
+            </button>
           </div>
         </header>
 
-        <main className="flex-1 overflow-y-auto p-6 lg:p-8">
+        <main className={cn(
+          "flex-1 min-h-0",
+          activeTab === "inbox" ? "flex flex-col overflow-hidden p-4 lg:p-6" : "overflow-y-auto p-6 lg:p-8"
+        )}>
           {activeTab === "mailbox"   && <MailboxManager />}
           {activeTab === "add"       && <EmailAdder />}
           {activeTab === "manage"    && <EmailManager />}
@@ -147,6 +189,7 @@ export default function Home() {
           {activeTab === "deploy"    && <DeployMonitor />}
           {activeTab === "devices"   && <DeviceManager />}
           {activeTab === "admin"     && <AdminPanel currentUserId={currentUserId} />}
+          {activeTab === "inbox"     && <InboxPanel onUnreadChange={setUnreadInbox} />}
           {activeTab === "credits"   && <CreditsPanel onCreditsChange={setCredits} />}
         </main>
       </div>
