@@ -4,7 +4,7 @@ import ReactQuill from "react-quill-new";
 
 const PRESETS = ["25%", "50%", "75%", "100%"];
 const MAX_BYTES = 800 * 1024; // 800 KB hedef (binary)
-const MAX_DIM   = 300;        // mail görselleri max 300px genişlik
+const MAX_DIM   = 1200;       // editörde kalite için 1200px, gönderimde bakeImageSizes devralır
 
 type QuillProps = ComponentProps<typeof ReactQuill>;
 

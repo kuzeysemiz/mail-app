@@ -40,7 +40,8 @@ async function resizeBase64(src: string, maxW: number): Promise<string> {
   });
 }
 
-const IMAGE_MAX_WIDTH = 300;
+const EMAIL_REF_WIDTH = 1200; // 100% = 1200px → 25% = 300px, 50% = 600px, 75% = 900px
+const IMAGE_DEFAULT_W = 300;  // stil yoksa varsayılan
 
 async function bakeImageSizes(html: string): Promise<string> {
   if (typeof document === "undefined") return html;
@@ -49,9 +50,14 @@ async function bakeImageSizes(html: string): Promise<string> {
   for (const img of Array.from(div.querySelectorAll("img"))) {
     const src = img.getAttribute("src") || "";
     if (!src.startsWith("data:image")) continue;
-    const resized = await resizeBase64(src, IMAGE_MAX_WIDTH);
+    const w = img.style.width;
+    let targetW: number;
+    if (w.endsWith("%"))      targetW = Math.round(parseFloat(w) / 100 * EMAIL_REF_WIDTH);
+    else if (w.endsWith("px")) targetW = Math.round(parseFloat(w));
+    else                       targetW = IMAGE_DEFAULT_W;
+    const resized = await resizeBase64(src, targetW);
     img.setAttribute("src", resized);
-    img.style.width = `${IMAGE_MAX_WIDTH}px`;
+    img.style.width = `${targetW}px`;
     img.style.height = "auto";
     img.style.maxWidth = "100%";
   }
