@@ -72,6 +72,7 @@ db.serialize(() => {
   db.run(`ALTER TABLE sessions ADD COLUMN isAdmin INTEGER DEFAULT 0`, () => {});
   db.run(`ALTER TABLE users ADD COLUMN loginOtp TEXT`, () => {});
   db.run(`ALTER TABLE users ADD COLUMN loginOtpExpires DATETIME`, () => {});
+  db.run(`ALTER TABLE packages ADD COLUMN paddlePriceId TEXT`, () => {});
 
   // leads, blacklist, whitelist, company_tags: UNIQUE kısıtı değişmesi gerekiyor
   // Tek seferlik migration ile yeni schema'ya geç
