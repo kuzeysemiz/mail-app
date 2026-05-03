@@ -196,27 +196,17 @@ export default function LeadsModal({ onClose, onSelect }: Props) {
   const handleRandomSelect = async () => {
     setRandomLoading(true);
     try {
-      let picked: Lead[] = [];
-
-      if (useFilters && selectedCompany) {
-        // Yüklü leads listesinden client-side rastgele seç
-        const pool = [...leads];
-        for (let i = pool.length - 1; i > 0; i--) {
-          const j = Math.floor(Math.random() * (i + 1));
-          [pool[i], pool[j]] = [pool[j], pool[i]];
-        }
-        picked = pool.slice(0, randomCount);
-      } else {
-        const filters = useFilters
-          ? { tag: activeTag || undefined, q: companySearch || undefined }
-          : undefined;
-        const r = await leadsAPI.getRandom(randomCount, excludeSent, filters);
-        picked = r.data;
-      }
-
+      const filters = useFilters
+        ? {
+            tag:     activeTag     || undefined,
+            q:       companySearch || undefined,
+            title:   selectedTitle || undefined,
+          }
+        : undefined;
+      const r = await leadsAPI.getRandom(randomCount, excludeSent, filters);
       setAllSelected(prev => {
         const next = new Map(prev);
-        picked.forEach((lead: Lead) => next.set(lead.id, lead));
+        (r.data as Lead[]).forEach(lead => next.set(lead.id, lead));
         return next;
       });
     } catch {}
@@ -596,7 +586,7 @@ export default function LeadsModal({ onClose, onSelect }: Props) {
               <input type="checkbox" checked={useFilters} onChange={e => setUseFilters(e.target.checked)}
                 className="accent-primary w-3.5 h-3.5" />
               <span className="text-xs text-muted-foreground">
-                {useFilters && selectedCompany ? `"${selectedCompany}" içinden seç` : useFilters && activeTag ? `"${activeTag}" etiketinden seç` : "Aktif filtrelerden seç"}
+                {useFilters && activeTag ? `"${activeTag}" etiketinden seç` : useFilters && companySearch ? `"${companySearch}" aramasından seç` : "Aktif filtrelerden seç"}
               </span>
             </label>
             <button onClick={handleRandomSelect} disabled={randomLoading}

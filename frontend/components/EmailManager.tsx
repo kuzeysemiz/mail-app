@@ -7,7 +7,7 @@ import { mailboxAPI, emailAPI, settingsAPI } from "@/services/api";
 
 const ReactQuill = dynamic(() => import("./QuillEditor"), { ssr: false });
 
-const QUILL_MODULES = { toolbar: [["bold","italic","underline"],["link","image"],["clean"]], imageResize: { modules: ["Resize", "DisplaySize"] } };
+const QUILL_MODULES = { toolbar: [["bold","italic","underline"],["link","image"],["clean"]] };
 const QUILL_FORMATS = ["bold","italic","underline","link","image"];
 
 interface Mailbox { id: number; email: string; }

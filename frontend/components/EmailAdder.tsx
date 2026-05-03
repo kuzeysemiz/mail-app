@@ -18,7 +18,6 @@ const QUILL_MODULES = {
     ["link", "image"],
     ["clean"],
   ],
-  imageResize: { modules: ["Resize", "DisplaySize"] },
 };
 const QUILL_FORMATS = ["header","bold","italic","underline","strike","blockquote","code-block","list","bullet","color","background","link","image"];
 const LANGS = ["İngilizce","Almanca","Fransızca","İspanyolca","İtalyanca","Portekizce","Rusça","Japonca","Çince","Korece","Arapça","Hintçe","Hollandaca","Polonyaca","İsveççe","Norveççe","Danimarkaca","Fince","Çekçe","Romence","Macarca","Yunanca","İbranice","Endonezce","Malayca","Tayca","Vietnamca","Ukraynaca","Farsça","Türkçe"];
