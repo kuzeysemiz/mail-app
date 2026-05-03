@@ -20,6 +20,48 @@ const QUILL_MODULES = {
   ],
 };
 const QUILL_FORMATS = ["header","bold","italic","underline","strike","blockquote","code-block","list","bullet","color","background","link","image"];
+
+// Gönderim öncesi: style'daki width'e göre görseli canvas'ta gerçek boyuta küçült
+async function resizeBase64(src: string, targetW: number): Promise<string> {
+  return new Promise(resolve => {
+    const img = new Image();
+    img.onload = () => {
+      const w = Math.max(1, targetW);
+      const h = Math.max(1, Math.round(w * img.naturalHeight / img.naturalWidth));
+      const c = document.createElement("canvas");
+      c.width = w; c.height = h;
+      const ctx = c.getContext("2d")!;
+      ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, w, h);
+      ctx.drawImage(img, 0, 0, w, h);
+      resolve(c.toDataURL("image/jpeg", 0.85));
+    };
+    img.onerror = () => resolve(src);
+    img.src = src;
+  });
+}
+
+async function bakeImageSizes(html: string, emailWidth = 600): Promise<string> {
+  if (typeof document === "undefined") return html;
+  const div = document.createElement("div");
+  div.innerHTML = html;
+  for (const img of Array.from(div.querySelectorAll("img"))) {
+    const src = img.getAttribute("src") || "";
+    if (!src.startsWith("data:image")) continue;
+    const w = img.style.width;
+    if (!w) continue;
+    const targetW = w.endsWith("%")
+      ? Math.round(parseFloat(w) / 100 * emailWidth)
+      : w.endsWith("px") ? Math.round(parseFloat(w)) : 0;
+    if (targetW < 1) continue;
+    const resized = await resizeBase64(src, targetW);
+    img.setAttribute("src", resized);
+    img.style.width = `${targetW}px`;
+    img.style.height = "auto";
+    img.style.maxWidth = "100%";
+  }
+  return div.innerHTML;
+}
+
 const LANGS = ["İngilizce","Almanca","Fransızca","İspanyolca","İtalyanca","Portekizce","Rusça","Japonca","Çince","Korece","Arapça","Hintçe","Hollandaca","Polonyaca","İsveççe","Norveççe","Danimarkaca","Fince","Çekçe","Romence","Macarca","Yunanca","İbranice","Endonezce","Malayca","Tayca","Vietnamca","Ukraynaca","Farsça","Türkçe"];
 
 interface Rule  { id: number; text: string; active: boolean; }
@@ -198,8 +240,12 @@ export default function EmailAdder() {
     if (scheduleMode === "manual" && (!manualDate || !manualTime)) { showMessage("Tarih ve saat seçin", "error"); return; }
     setLoading(true);
     try {
+      const [content, signature] = await Promise.all([
+        bakeImageSizes(mailContent),
+        bakeImageSizes(mailSignature),
+      ]);
       const r = await emailAPI.add(
-        selectedMailbox, emailList, mailSubject, mailContent, mailSignature,
+        selectedMailbox, emailList, mailSubject, content, signature,
         scheduleMode === "manual" ? manualDate : null,
         scheduleMode === "manual" ? manualTime : null,
         scheduleMode === "week" ? selectedWeek : null,
