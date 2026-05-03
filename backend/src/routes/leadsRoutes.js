@@ -232,11 +232,17 @@ SADECE geçerli JSON döndür, başka hiçbir şey yazma. Format:
 router.get('/random', (req, res) => {
   const count = Math.min(parseInt(req.query.count) || 10, 500);
   const excludeSent = req.query.excludeSent === 'true';
+  const { company, title, tag, q } = req.query;
   const uf = userFilter(req, 'l');
+  const tf = tagFilter(req, 'ct');
 
   let query = `SELECT l.* FROM leads l WHERE l.email IS NOT NULL ${uf.clause}`;
   const params = [...uf.params];
 
+  if (company) { query += ` AND l.company = ?`; params.push(company); }
+  if (title)   { query += ` AND l.title = ?`;   params.push(title); }
+  if (q)       { query += ` AND (l.firstName LIKE ? OR l.lastName LIKE ? OR l.email LIKE ?)`; params.push(`%${q}%`, `%${q}%`, `%${q}%`); }
+  if (tag)     { query += ` AND l.company IN (SELECT ct.company FROM company_tags ct WHERE ct.tag = ? ${tf.clause})`; params.push(tag, ...tf.params); }
   if (excludeSent) {
     query += ` AND l.email NOT IN (SELECT DISTINCT recipientEmail FROM logs WHERE status IN ('sent','success'))`;
   }

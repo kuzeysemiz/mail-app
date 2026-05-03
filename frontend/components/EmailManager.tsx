@@ -5,10 +5,10 @@ import { List, LayoutGrid, Send, Trash2, Edit2, FileDown, CheckSquare, Zap, Chev
 import { cn } from "@/lib/utils";
 import { mailboxAPI, emailAPI, settingsAPI } from "@/services/api";
 
-const ReactQuill = dynamic(() => import("react-quill-new"), { ssr: false });
+const ReactQuill = dynamic(() => import("./QuillEditor"), { ssr: false });
 
-const QUILL_MODULES = { toolbar: [["bold","italic","underline"],["link"],["clean"]] };
-const QUILL_FORMATS = ["bold","italic","underline","link"];
+const QUILL_MODULES = { toolbar: [["bold","italic","underline"],["link","image"],["clean"]], imageResize: { modules: ["Resize", "DisplaySize"] } };
+const QUILL_FORMATS = ["bold","italic","underline","link","image"];
 
 interface Mailbox { id: number; email: string; }
 interface Batch { batchId: string; mailSubject: string; totalCount: number; sentCount: number; pendingCount: number; failedCount: number; createdAt: string; }

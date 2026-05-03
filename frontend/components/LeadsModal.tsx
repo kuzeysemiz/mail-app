@@ -90,6 +90,7 @@ export default function LeadsModal({ onClose, onSelect }: Props) {
   const [fillMsg, setFillMsg]                 = useState<{ text: string; type: "success" | "error" } | null>(null);
   const [randomCount, setRandomCount]         = useState(10);
   const [excludeSent, setExcludeSent]         = useState(true);
+  const [useFilters, setUseFilters]           = useState(false);
   const [randomLoading, setRandomLoading]     = useState(false);
   const [showImport, setShowImport]           = useState(false);
   const [apiKeyInput, setApiKeyInput]         = useState("");
@@ -195,10 +196,27 @@ export default function LeadsModal({ onClose, onSelect }: Props) {
   const handleRandomSelect = async () => {
     setRandomLoading(true);
     try {
-      const r = await leadsAPI.getRandom(randomCount, excludeSent);
+      let picked: Lead[] = [];
+
+      if (useFilters && selectedCompany) {
+        // Yüklü leads listesinden client-side rastgele seç
+        const pool = [...leads];
+        for (let i = pool.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [pool[i], pool[j]] = [pool[j], pool[i]];
+        }
+        picked = pool.slice(0, randomCount);
+      } else {
+        const filters = useFilters
+          ? { tag: activeTag || undefined, q: companySearch || undefined }
+          : undefined;
+        const r = await leadsAPI.getRandom(randomCount, excludeSent, filters);
+        picked = r.data;
+      }
+
       setAllSelected(prev => {
         const next = new Map(prev);
-        r.data.forEach((lead: Lead) => next.set(lead.id, lead));
+        picked.forEach((lead: Lead) => next.set(lead.id, lead));
         return next;
       });
     } catch {}
@@ -573,6 +591,13 @@ export default function LeadsModal({ onClose, onSelect }: Props) {
               <input type="checkbox" checked={excludeSent} onChange={e => setExcludeSent(e.target.checked)}
                 className="accent-primary w-3.5 h-3.5" />
               <span className="text-xs text-muted-foreground">Gönderilenleri hariç tut</span>
+            </label>
+            <label className="flex items-center gap-1.5 cursor-pointer select-none">
+              <input type="checkbox" checked={useFilters} onChange={e => setUseFilters(e.target.checked)}
+                className="accent-primary w-3.5 h-3.5" />
+              <span className="text-xs text-muted-foreground">
+                {useFilters && selectedCompany ? `"${selectedCompany}" içinden seç` : useFilters && activeTag ? `"${activeTag}" etiketinden seç` : "Aktif filtrelerden seç"}
+              </span>
             </label>
             <button onClick={handleRandomSelect} disabled={randomLoading}
               className="flex items-center gap-1.5 px-3 py-2 bg-secondary border border-border text-foreground rounded-lg text-xs font-medium hover:bg-muted disabled:opacity-50 transition-colors">

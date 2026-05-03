@@ -17,6 +17,9 @@ export default function UserLoginScreen({ onLogin, onGoRegister, onGoAdminLogin 
   const [error, setError]       = useState("");
   const [forgot, setForgot]     = useState(false);
   const [forgotDone, setForgotDone] = useState(false);
+  const [otpStep, setOtpStep]   = useState(false);
+  const [otpUserId, setOtpUserId] = useState<number | null>(null);
+  const [otp, setOtp]           = useState("");
 
   const handleLogin = async () => {
     if (!email.trim() || !password) return;
@@ -24,13 +27,36 @@ export default function UserLoginScreen({ onLogin, onGoRegister, onGoAdminLogin 
     setLoading(true);
     try {
       const r = await userAPI.login(email.trim(), password);
+      if (r.data.requiresOtp) {
+        setOtpUserId(r.data.userId);
+        setOtpStep(true);
+      } else {
+        const { token, expiresAt, user } = r.data;
+        localStorage.setItem("authToken", token);
+        localStorage.setItem("authExpiry", expiresAt);
+        onLogin(token, expiresAt, user);
+      }
+    } catch (e: unknown) {
+      const msg = (e as { response?: { data?: { error?: string } } })?.response?.data?.error;
+      setError(msg || "Giriş başarısız");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerifyOtp = async () => {
+    if (!otp.trim() || !otpUserId) return;
+    setError("");
+    setLoading(true);
+    try {
+      const r = await userAPI.verifyOtp(otpUserId, otp.trim());
       const { token, expiresAt, user } = r.data;
       localStorage.setItem("authToken", token);
       localStorage.setItem("authExpiry", expiresAt);
       onLogin(token, expiresAt, user);
     } catch (e: unknown) {
       const msg = (e as { response?: { data?: { error?: string } } })?.response?.data?.error;
-      setError(msg || "Giriş başarısız");
+      setError(msg || "Kod hatalı veya süresi dolmuş");
     } finally {
       setLoading(false);
     }
@@ -48,6 +74,58 @@ export default function UserLoginScreen({ onLogin, onGoRegister, onGoAdminLogin 
       setLoading(false);
     }
   };
+
+  if (otpStep) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background p-4">
+        <div className="w-full max-w-sm space-y-6">
+          <div className="flex flex-col items-center gap-3">
+            <div className="w-12 h-12 rounded-xl bg-primary flex items-center justify-center">
+              <Mail size={22} className="text-primary-foreground" />
+            </div>
+            <div className="text-center">
+              <h1 className="text-xl font-bold text-foreground">Doğrulama Kodu</h1>
+              <p className="text-sm text-muted-foreground mt-1">{email} adresine kod gönderildi</p>
+            </div>
+          </div>
+
+          <div className="bg-card border border-border rounded-2xl p-6 space-y-4">
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">6 Haneli Kod</label>
+              <input
+                type="text"
+                inputMode="numeric"
+                maxLength={6}
+                value={otp}
+                onChange={e => setOtp(e.target.value.replace(/\D/g, ""))}
+                onKeyDown={e => e.key === "Enter" && handleVerifyOtp()}
+                placeholder="000000"
+                className="w-full px-3.5 py-3 bg-input border border-border rounded-lg text-lg font-mono text-center outline-none focus:ring-1 focus:ring-ring placeholder:text-muted-foreground tracking-widest"
+                autoFocus
+              />
+            </div>
+
+            {error && <p className="text-xs text-destructive">{error}</p>}
+
+            <button
+              onClick={handleVerifyOtp}
+              disabled={loading || otp.length !== 6}
+              className="w-full py-2.5 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:opacity-90 disabled:opacity-50 transition-opacity"
+            >
+              {loading ? "Doğrulanıyor..." : "Doğrula"}
+            </button>
+
+            <button
+              onClick={() => { setOtpStep(false); setOtp(""); setError(""); }}
+              className="w-full text-xs text-muted-foreground hover:text-foreground transition-colors"
+            >
+              ← Geri Dön
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (forgot) {
     return (

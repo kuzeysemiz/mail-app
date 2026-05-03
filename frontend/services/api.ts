@@ -106,8 +106,8 @@ export const leadsAPI = {
   getTags: () => api.get("/leads/tags"),
   autoTag: () => api.post("/leads/auto-tag"),
   fillCompanies: () => api.post("/leads/fill-companies"),
-  getRandom: (count: number, excludeSent: boolean) =>
-    api.get("/leads/random", { params: { count, excludeSent } }),
+  getRandom: (count: number, excludeSent: boolean, filters?: { company?: string; title?: string; tag?: string; q?: string }) =>
+    api.get("/leads/random", { params: { count, excludeSent, ...filters } }),
   import: () => api.post("/leads/import"),
   getApiKey: () => api.get("/leads/apikey"),
   saveApiKey: (apiKey: string) => api.post("/leads/apikey", { apiKey }),
@@ -117,6 +117,7 @@ export const leadsAPI = {
 export const userAPI = {
   register: (email: string, password: string) => api.post("/users/register", { email, password }),
   login: (email: string, password: string) => api.post("/users/login", { email, password }),
+  verifyOtp: (userId: number, otp: string) => api.post("/users/verify-otp", { userId, otp }),
   verifyEmail: (token: string) => api.get(`/users/verify-email?token=${token}`),
   forgotPassword: (email: string) => api.post("/users/forgot-password", { email }),
   resetPassword: (token: string, password: string) => api.post("/users/reset-password", { token, password }),

@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 import { mailboxAPI, emailAPI, draftAPI, savedEmailsAPI, aiAPI, settingsAPI } from "@/services/api";
 const LeadsModal = dynamic(() => import("./LeadsModal"), { ssr: false });
 
-const ReactQuill = dynamic(() => import("react-quill-new"), { ssr: false, loading: () => <div className="h-40 bg-input border border-border rounded-lg animate-pulse" /> });
+const ReactQuill = dynamic(() => import("./QuillEditor"), { ssr: false, loading: () => <div className="h-40 bg-input border border-border rounded-lg animate-pulse" /> });
 
 const QUILL_MODULES = {
   toolbar: [
@@ -18,6 +18,7 @@ const QUILL_MODULES = {
     ["link", "image"],
     ["clean"],
   ],
+  imageResize: { modules: ["Resize", "DisplaySize"] },
 };
 const QUILL_FORMATS = ["header","bold","italic","underline","strike","blockquote","code-block","list","bullet","color","background","link","image"];
 const LANGS = ["İngilizce","Almanca","Fransızca","İspanyolca","İtalyanca","Portekizce","Rusça","Japonca","Çince","Korece","Arapça","Hintçe","Hollandaca","Polonyaca","İsveççe","Norveççe","Danimarkaca","Fince","Çekçe","Romence","Macarca","Yunanca","İbranice","Endonezce","Malayca","Tayca","Vietnamca","Ukraynaca","Farsça","Türkçe"];

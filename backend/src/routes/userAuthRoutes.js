@@ -13,6 +13,33 @@ function randomToken() {
   return crypto.randomBytes(32).toString('hex');
 }
 
+function randomOtp() {
+  return String(Math.floor(100000 + Math.random() * 900000));
+}
+
+async function getOtpMailbox(userId) {
+  const own = await new Promise(r =>
+    db.get(`SELECT email, appPassword FROM mailboxes WHERE userId = ?`, [userId], (_, row) => r(row))
+  );
+  if (own) return own;
+  return new Promise(r =>
+    db.get(`SELECT email, appPassword FROM mailboxes LIMIT 1`, (_, row) => r(row))
+  );
+}
+
+async function sendOtpEmail(toEmail, otp, mailbox) {
+  if (!mailbox) return;
+  const ms = new MailService(mailbox.email, mailbox.appPassword);
+  await ms.sendMail(toEmail, 'Giriş Doğrulama Kodu', `
+    <div style="font-family:sans-serif;max-width:480px;margin:40px auto;padding:32px;border:1px solid #e5e7eb;border-radius:12px;">
+      <h2 style="margin:0 0 16px;color:#111827;">Giriş Doğrulama</h2>
+      <p style="color:#6b7280;margin:0 0 24px;">Aşağıdaki kodu giriş ekranına girin. Kod 10 dakika geçerlidir.</p>
+      <div style="font-size:36px;font-weight:700;letter-spacing:8px;color:#00c896;text-align:center;padding:20px;background:#f9fafb;border-radius:8px;">${otp}</div>
+      <p style="color:#9ca3af;font-size:12px;margin-top:24px;">Bu isteği siz yapmadıysanız görmezden gelin.</p>
+    </div>
+  `).catch(() => {});
+}
+
 async function sendVerificationEmail(email, token) {
   const row = await new Promise(r => db.get('SELECT email, appPassword FROM mailboxes LIMIT 1', (_, v) => r(v)));
   if (!row) return;
@@ -57,7 +84,7 @@ router.post('/register', async (req, res) => {
   );
 });
 
-// Giriş
+// Giriş — şifre doğruysa OTP gönder
 router.post('/login', async (req, res) => {
   const { email, password } = req.body;
   if (!email || !password) return res.status(400).json({ error: 'Email ve şifre zorunlu' });
@@ -68,25 +95,52 @@ router.post('/login', async (req, res) => {
     const match = await bcrypt.compare(password, user.passwordHash);
     if (!match) return res.status(401).json({ error: 'Email veya şifre hatalı' });
 
-    const token = randomToken();
-    const expiresAt = new Date(Date.now() + SESSION_DAYS * 24 * 60 * 60 * 1000).toISOString();
+    const otp = randomOtp();
+    const otpExpires = new Date(Date.now() + 10 * 60 * 1000).toISOString();
+    db.run(`UPDATE users SET loginOtp = ?, loginOtpExpires = ? WHERE id = ?`, [otp, otpExpires, user.id]);
 
-    db.run(
-      `INSERT INTO sessions (deviceId, deviceName, token, expiresAt, userId, isAdmin)
-       VALUES (?, 'Web', ?, ?, ?, ?)`,
-      [`user_${user.id}_${Date.now()}`, token, expiresAt, user.id, user.isAdmin],
-      err => {
-        if (err) return res.status(500).json({ error: 'Oturum oluşturulamadı' });
-        logger.info(`Kullanıcı girişi: ${email}`);
-        res.json({
-          success: true,
-          token,
-          expiresAt,
-          user: { id: user.id, email: user.email, isAdmin: user.isAdmin, emailVerified: user.emailVerified },
-        });
-      }
-    );
+    const mailbox = await getOtpMailbox(user.id);
+    sendOtpEmail(user.email, otp, mailbox);
+    logger.info(`OTP gönderildi: ${user.email} → ${mailbox?.email || 'mailbox yok'}`);
+
+    res.json({ requiresOtp: true, userId: user.id });
   });
+});
+
+// OTP doğrula ve session oluştur
+router.post('/verify-otp', (req, res) => {
+  const { userId, otp } = req.body;
+  if (!userId || !otp) return res.status(400).json({ error: 'userId ve otp zorunlu' });
+
+  const now = new Date().toISOString();
+  db.get(
+    `SELECT * FROM users WHERE id = ? AND loginOtp = ? AND loginOtpExpires > ?`,
+    [userId, otp, now],
+    (err, user) => {
+      if (err || !user) return res.status(401).json({ error: 'Kod hatalı veya süresi dolmuş' });
+
+      db.run(`UPDATE users SET loginOtp = NULL, loginOtpExpires = NULL WHERE id = ?`, [user.id]);
+
+      const token = randomToken();
+      const expiresAt = new Date(Date.now() + SESSION_DAYS * 24 * 60 * 60 * 1000).toISOString();
+
+      db.run(
+        `INSERT INTO sessions (deviceId, deviceName, token, expiresAt, userId, isAdmin)
+         VALUES (?, 'Web', ?, ?, ?, ?)`,
+        [`user_${user.id}_${Date.now()}`, token, expiresAt, user.id, user.isAdmin],
+        err => {
+          if (err) return res.status(500).json({ error: 'Oturum oluşturulamadı' });
+          logger.info(`Kullanıcı girişi (OTP): ${user.email}`);
+          res.json({
+            success: true,
+            token,
+            expiresAt,
+            user: { id: user.id, email: user.email, isAdmin: user.isAdmin, emailVerified: user.emailVerified },
+          });
+        }
+      );
+    }
+  );
 });
 
 // E-posta doğrulama
