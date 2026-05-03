@@ -42,7 +42,9 @@ export default function Home() {
   const [isAdmin, setIsAdmin]       = useState(false);
   const [currentUserId, setCurrentUserId] = useState<number | null>(null);
   const [credits, setCredits]       = useState<number | null>(null);
-  const [unreadInbox, setUnreadInbox] = useState(0);
+  const [unreadInbox, setUnreadInbox]       = useState(0);
+  const [inboxOpenKey, setInboxOpenKey]     = useState(0);
+  const [inboxAutoOpen, setInboxAutoOpen]   = useState(false);
   const inboxPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
@@ -83,10 +85,13 @@ export default function Home() {
     setScreen("app");
   };
 
-  const handleTabChange = (tab: string) => {
+  const handleTabChange = (tab: string, autoOpen = false) => {
     setActiveTab(tab);
     setSidebarOpen(false);
-    if (tab === "inbox") setUnreadInbox(0);
+    if (tab === "inbox") {
+      setInboxAutoOpen(autoOpen);
+      setInboxOpenKey(k => k + 1);
+    }
   };
 
   const handleLogout = async () => {
@@ -156,7 +161,7 @@ export default function Home() {
           </div>
           <div className="flex items-center gap-3">
             <button
-              onClick={() => handleTabChange("inbox")}
+              onClick={() => handleTabChange("inbox", true)}
               className="relative p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
               title="Gelen Kutusu"
             >
@@ -189,7 +194,7 @@ export default function Home() {
           {activeTab === "deploy"    && <DeployMonitor />}
           {activeTab === "devices"   && <DeviceManager />}
           {activeTab === "admin"     && <AdminPanel currentUserId={currentUserId} />}
-          {activeTab === "inbox"     && <InboxPanel onUnreadChange={setUnreadInbox} />}
+          {activeTab === "inbox"     && <InboxPanel key={inboxOpenKey} onUnreadChange={setUnreadInbox} autoOpenUnread={inboxAutoOpen} />}
           {activeTab === "credits"   && <CreditsPanel onCreditsChange={setCredits} />}
         </main>
       </div>

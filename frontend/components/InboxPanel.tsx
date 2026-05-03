@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { inboxAPI } from "@/services/api";
 import { RefreshCw, MailOpen, Trash2, Reply, ChevronLeft, CheckCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -22,6 +22,7 @@ interface MessageDetail extends Message {
 
 interface Props {
   onUnreadChange?: (count: number) => void;
+  autoOpenUnread?: boolean;
 }
 
 function formatDate(iso: string) {
@@ -33,32 +34,45 @@ function formatDate(iso: string) {
   return d.toLocaleDateString("tr-TR", { day: "2-digit", month: "short", year: "2-digit" });
 }
 
-export default function InboxPanel({ onUnreadChange }: Props) {
-  const [messages, setMessages]     = useState<Message[]>([]);
-  const [total, setTotal]           = useState(0);
-  const [page, setPage]             = useState(1);
-  const [selected, setSelected]     = useState<MessageDetail | null>(null);
-  const [loading, setLoading]       = useState(false);
-  const [scanning, setScanning]     = useState(false);
-  const [replyBody, setReplyBody]   = useState("");
-  const [replying, setReplying]     = useState(false);
-  const [replyDone, setReplyDone]   = useState(false);
-  const [showReply, setShowReply]   = useState(false);
+export default function InboxPanel({ onUnreadChange, autoOpenUnread }: Props) {
+  const [messages, setMessages]       = useState<Message[]>([]);
+  const [total, setTotal]             = useState(0);
+  const [page, setPage]               = useState(1);
+  const [selected, setSelected]       = useState<MessageDetail | null>(null);
+  const [loading, setLoading]         = useState(false);
+  const [scanning, setScanning]       = useState(false);
+  const [replyBody, setReplyBody]     = useState("");
+  const [replying, setReplying]       = useState(false);
+  const [replyDone, setReplyDone]     = useState(false);
+  const [showReply, setShowReply]     = useState(false);
+  const autoOpenDoneRef               = useRef(false);
   const LIMIT = 30;
 
-  const fetchMessages = useCallback(async (p = 1) => {
+  const fetchMessages = useCallback(async (p = 1): Promise<Message[]> => {
     setLoading(true);
     try {
       const r = await inboxAPI.getMessages({ page: p, limit: LIMIT });
       setMessages(r.data.messages);
       setTotal(r.data.total);
       setPage(p);
+      return r.data.messages as Message[];
+    } catch {
+      return [];
     } finally {
       setLoading(false);
     }
   }, []);
 
-  useEffect(() => { fetchMessages(1); }, [fetchMessages]);
+  useEffect(() => {
+    fetchMessages(1).then(msgs => {
+      if (autoOpenUnread && !autoOpenDoneRef.current) {
+        autoOpenDoneRef.current = true;
+        const first = msgs.find(m => !m.isRead);
+        if (first) openMessage(first);
+      }
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fetchMessages]);
 
   const openMessage = async (msg: Message) => {
     const r = await inboxAPI.getMessage(msg.id);
