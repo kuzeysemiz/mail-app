@@ -47,6 +47,39 @@ function initials(name: string, email: string) {
   return email.slice(0, 2).toUpperCase();
 }
 
+function wrapEmailHtml(html: string): string {
+  const css = `<style>
+    html { background: #07090f !important; }
+    body {
+      background: #07090f !important;
+      color: #f3f4f6 !important;
+      margin: 0 !important;
+      padding: 20px 20px 40px !important;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+      font-size: 14px !important;
+      line-height: 1.65 !important;
+    }
+    *, *::before, *::after {
+      color: #f3f4f6 !important;
+      background-color: transparent !important;
+      border-color: #253047 !important;
+    }
+    a, a * {
+      color: #00c896 !important;
+      font-weight: 700 !important;
+      text-decoration: underline !important;
+    }
+    img { max-width: 100% !important; height: auto !important; }
+    table { border-collapse: collapse !important; }
+    hr { border-color: #253047 !important; opacity: 0.5; }
+    blockquote { border-left: 3px solid #253047 !important; padding-left: 12px !important; margin: 8px 0 !important; opacity: 0.7; }
+  </style>`;
+  if (html.includes("<head>")) return html.replace("<head>", "<head>" + css);
+  if (html.match(/<head\b/i)) return html.replace(/(<head\b[^>]*>)/i, "$1" + css);
+  if (html.match(/<body\b/i)) return html.replace(/(<body\b[^>]*>)/i, "$1" + css);
+  return css + html;
+}
+
 export default function InboxPanel({ onUnreadChange, autoOpenUnread }: Props) {
   const [messages, setMessages]     = useState<Message[]>([]);
   const [total, setTotal]           = useState(0);
@@ -362,22 +395,19 @@ export default function InboxPanel({ onUnreadChange, autoOpenUnread }: Props) {
           {/* Mesaj içeriği */}
           <div style={{ flex: 1, overflowY: "auto", minHeight: 0 }}>
             {selected.bodyHtml ? (
-              <div style={{ padding: 16 }}>
-                <div style={{ borderRadius: 10, overflow: "hidden", border: "1px solid var(--border)", background: "#fff" }}>
-                  <iframe
-                    srcDoc={selected.bodyHtml}
-                    sandbox=""
-                    style={{ width: "100%", border: "none", display: "block", minHeight: 300, height: 1 }}
-                    onLoad={e => {
-                      const f = e.currentTarget;
-                      try {
-                        const h = f.contentDocument?.documentElement.scrollHeight ?? f.contentDocument?.body.scrollHeight ?? 300;
-                        f.style.height = Math.max(h, 100) + "px";
-                      } catch { f.style.height = "400px"; }
-                    }}
-                  />
-                </div>
-              </div>
+              <iframe
+                srcDoc={wrapEmailHtml(selected.bodyHtml)}
+                sandbox="allow-same-origin"
+                style={{ width: "100%", border: "none", display: "block", height: 1, minHeight: "100%" }}
+                onLoad={e => {
+                  const f = e.currentTarget;
+                  try {
+                    const doc = f.contentDocument;
+                    const h = doc?.documentElement.scrollHeight ?? doc?.body?.scrollHeight ?? 0;
+                    f.style.height = Math.max(h, 200) + "px";
+                  } catch { f.style.height = "600px"; }
+                }}
+              />
             ) : (
               <div style={{ padding: 20 }}>
                 <div style={{ background: "var(--card2)", border: "1px solid var(--border)", borderRadius: 10, padding: "16px 20px" }}>
