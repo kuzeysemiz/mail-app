@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { inboxAPI } from "@/services/api";
-import { RefreshCw, MailOpen, Trash2, Reply, ChevronLeft, CheckCheck } from "lucide-react";
+import { RefreshCw, MailOpen, Trash2, Reply, ChevronLeft, CheckCheck, Mail } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface Message {
@@ -34,18 +34,31 @@ function formatDate(iso: string) {
   return d.toLocaleDateString("tr-TR", { day: "2-digit", month: "short", year: "2-digit" });
 }
 
+const AVATAR_COLORS = ["#00c896", "#3b82f6", "#8b5cf6", "#f59e0b", "#ef4444", "#06b6d4", "#ec4899", "#14b8a6"];
+
+function avatarColor(email: string) {
+  let hash = 0;
+  for (let i = 0; i < email.length; i++) hash = email.charCodeAt(i) + ((hash << 5) - hash);
+  return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
+}
+
+function initials(name: string, email: string) {
+  if (name) return name.split(" ").filter(Boolean).map(w => w[0]).join("").slice(0, 2).toUpperCase();
+  return email.slice(0, 2).toUpperCase();
+}
+
 export default function InboxPanel({ onUnreadChange, autoOpenUnread }: Props) {
-  const [messages, setMessages]       = useState<Message[]>([]);
-  const [total, setTotal]             = useState(0);
-  const [page, setPage]               = useState(1);
-  const [selected, setSelected]       = useState<MessageDetail | null>(null);
-  const [loading, setLoading]         = useState(false);
-  const [scanning, setScanning]       = useState(false);
-  const [replyBody, setReplyBody]     = useState("");
-  const [replying, setReplying]       = useState(false);
-  const [replyDone, setReplyDone]     = useState(false);
-  const [showReply, setShowReply]     = useState(false);
-  const autoOpenDoneRef               = useRef(false);
+  const [messages, setMessages]     = useState<Message[]>([]);
+  const [total, setTotal]           = useState(0);
+  const [page, setPage]             = useState(1);
+  const [selected, setSelected]     = useState<MessageDetail | null>(null);
+  const [loading, setLoading]       = useState(false);
+  const [scanning, setScanning]     = useState(false);
+  const [replyBody, setReplyBody]   = useState("");
+  const [replying, setReplying]     = useState(false);
+  const [replyDone, setReplyDone]   = useState(false);
+  const [showReply, setShowReply]   = useState(false);
+  const autoOpenDoneRef             = useRef(false);
   const LIMIT = 30;
 
   const fetchMessages = useCallback(async (p = 1): Promise<Message[]> => {
@@ -131,155 +144,209 @@ export default function InboxPanel({ onUnreadChange, autoOpenUnread }: Props) {
   const totalPages = Math.ceil(total / LIMIT);
 
   return (
-    <div className="flex flex-1 min-h-0 gap-0 bg-card border border-border rounded-xl overflow-hidden">
-      {/* Left: message list */}
+    <div className="flex flex-1 min-h-0 gap-0 overflow-hidden" style={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: "var(--radius)" }}>
+
+      {/* ── Sol: mesaj listesi ── */}
       <div className={cn(
-        "flex flex-col border-r border-border min-h-0",
-        selected ? "hidden md:flex md:w-80 shrink-0" : "flex-1"
-      )}>
-        {/* List header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-border shrink-0">
-          <span className="text-sm font-medium text-foreground">
-            Gelen Kutusu
-            {total > 0 && <span className="ml-1.5 text-xs text-muted-foreground">({total})</span>}
-          </span>
-          <div className="flex items-center gap-1">
-            <button
-              onClick={handleMarkAllRead}
-              title="Tümünü okundu yap"
-              className="p-1.5 rounded text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
-            >
-              <CheckCheck size={15} />
+        "flex flex-col min-h-0",
+        selected ? "hidden md:flex shrink-0" : "flex-1"
+      )} style={{ width: selected ? 300 : undefined, borderRight: "1px solid var(--border)" }}>
+
+        {/* Liste başlığı */}
+        <div className="flex items-center justify-between shrink-0"
+          style={{ padding: "12px 16px", borderBottom: "1px solid var(--border)", background: "var(--card2)" }}>
+          <div className="flex items-center gap-2">
+            <Mail size={14} style={{ color: "var(--primary)" }} />
+            <span style={{ fontSize: 13, fontWeight: 600, color: "var(--text)" }}>Gelen Kutusu</span>
+            {total > 0 && <span style={{ fontSize: 11, color: "var(--muted)" }}>({total})</span>}
+          </div>
+          <div style={{ display: "flex", gap: 2 }}>
+            <button onClick={handleMarkAllRead} title="Tümünü okundu yap"
+              style={{ padding: "6px", borderRadius: 6, color: "var(--muted)", background: "transparent", border: "none", cursor: "pointer", display: "flex", alignItems: "center" }}
+              onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = "var(--card)"; (e.currentTarget as HTMLButtonElement).style.color = "var(--text)"; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = "transparent"; (e.currentTarget as HTMLButtonElement).style.color = "var(--muted)"; }}>
+              <CheckCheck size={14} />
             </button>
-            <button
-              onClick={handleScan}
-              disabled={scanning}
-              title="Yeni mesajları tara"
-              className="p-1.5 rounded text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors disabled:opacity-40"
-            >
-              <RefreshCw size={15} className={scanning ? "animate-spin" : ""} />
+            <button onClick={handleScan} disabled={scanning} title="Yeni mesajları tara"
+              style={{ padding: "6px", borderRadius: 6, color: "var(--muted)", background: "transparent", border: "none", cursor: "pointer", display: "flex", alignItems: "center", opacity: scanning ? 0.4 : 1 }}
+              onMouseEnter={e => { if (!scanning) { (e.currentTarget as HTMLButtonElement).style.background = "var(--card)"; (e.currentTarget as HTMLButtonElement).style.color = "var(--text)"; } }}
+              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = "transparent"; (e.currentTarget as HTMLButtonElement).style.color = "var(--muted)"; }}>
+              <RefreshCw size={14} className={scanning ? "animate-spin" : ""} />
             </button>
           </div>
         </div>
 
-        {/* Messages */}
-        <div className="flex-1 overflow-y-auto">
+        {/* Mesaj listesi (scrollable) */}
+        <div style={{ flex: 1, overflowY: "auto", minHeight: 0 }}>
           {loading && messages.length === 0 ? (
-            <div className="flex items-center justify-center h-32 text-sm text-muted-foreground">Yükleniyor…</div>
-          ) : messages.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-40 text-sm text-muted-foreground gap-2">
-              <MailOpen size={28} className="opacity-30" />
-              Gelen kutu boş
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: 120, fontSize: 13, color: "var(--muted)" }}>
+              Yükleniyor…
             </div>
-          ) : (
-            messages.map(msg => (
-              <button
-                key={msg.id}
-                onClick={() => openMessage(msg)}
-                className={cn(
-                  "w-full text-left px-4 py-3 border-b border-border/50 transition-colors",
-                  selected?.id === msg.id ? "bg-primary/10" : "hover:bg-secondary/50",
-                  !msg.isRead && "bg-primary/5"
-                )}
+          ) : messages.length === 0 ? (
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: 160, gap: 10, color: "var(--muted)" }}>
+              <MailOpen size={30} style={{ opacity: 0.2 }} />
+              <span style={{ fontSize: 13 }}>Gelen kutu boş</span>
+            </div>
+          ) : messages.map(msg => {
+            const color = avatarColor(msg.fromEmail);
+            const init = initials(msg.fromName, msg.fromEmail);
+            const isSelected = selected?.id === msg.id;
+            const isUnread = !msg.isRead;
+            return (
+              <button key={msg.id} onClick={() => openMessage(msg)}
+                style={{
+                  width: "100%", textAlign: "left", display: "flex", alignItems: "flex-start",
+                  gap: 10, padding: "12px 16px",
+                  borderBottom: "1px solid var(--border)",
+                  borderLeft: isSelected ? `3px solid var(--primary)` : "3px solid transparent",
+                  background: isSelected ? "rgba(0,200,150,0.08)" : isUnread ? "rgba(255,255,255,0.02)" : "transparent",
+                  cursor: "pointer", border: "none", outline: "none",
+                  transition: "background 0.15s",
+                }}
+                onMouseEnter={e => { if (!isSelected) (e.currentTarget as HTMLButtonElement).style.background = "var(--card2)"; }}
+                onMouseLeave={e => { if (!isSelected) (e.currentTarget as HTMLButtonElement).style.background = isUnread ? "rgba(255,255,255,0.02)" : "transparent"; }}
               >
-                <div className="flex items-start justify-between gap-2">
-                  <span className={cn("text-sm truncate", !msg.isRead ? "font-semibold text-foreground" : "font-medium text-foreground/80")}>
-                    {msg.fromName || msg.fromEmail}
-                  </span>
-                  <span className="text-[10px] text-muted-foreground shrink-0">{formatDate(msg.receivedAt)}</span>
+                {/* Avatar */}
+                <div style={{
+                  width: 36, height: 36, borderRadius: "50%", flexShrink: 0,
+                  background: color + "20", color, display: "flex", alignItems: "center",
+                  justifyContent: "center", fontSize: 12, fontWeight: 700, marginTop: 2,
+                }}>
+                  {init}
                 </div>
-                <p className={cn("text-xs truncate mt-0.5", !msg.isRead ? "text-foreground/70" : "text-muted-foreground")}>
-                  {msg.subject || "(konu yok)"}
-                </p>
-                {!msg.isRead && (
-                  <span className="inline-block w-1.5 h-1.5 rounded-full bg-primary mt-1" />
+                {/* İçerik */}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 6, marginBottom: 2 }}>
+                    <span style={{
+                      fontSize: 13, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                      fontWeight: isUnread ? 600 : 500,
+                      color: isUnread ? "var(--text)" : "rgba(243,244,246,0.6)",
+                    }}>
+                      {msg.fromName || msg.fromEmail}
+                    </span>
+                    <span style={{ fontSize: 10, color: "var(--muted)", flexShrink: 0 }}>{formatDate(msg.receivedAt)}</span>
+                  </div>
+                  <p style={{
+                    fontSize: 12, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                    color: isUnread ? "rgba(243,244,246,0.75)" : "var(--muted)",
+                    margin: 0,
+                  }}>
+                    {msg.subject || "(konu yok)"}
+                  </p>
+                </div>
+                {/* Okunmamış nokta */}
+                {isUnread && (
+                  <span style={{ width: 7, height: 7, borderRadius: "50%", background: "var(--primary)", flexShrink: 0, marginTop: 6 }} />
                 )}
               </button>
-            ))
-          )}
+            );
+          })}
         </div>
 
-        {/* Pagination */}
+        {/* Sayfalama */}
         {totalPages > 1 && (
-          <div className="flex items-center justify-between px-4 py-2 border-t border-border shrink-0">
-            <button
-              disabled={page <= 1}
-              onClick={() => fetchMessages(page - 1)}
-              className="text-xs text-muted-foreground hover:text-foreground disabled:opacity-30"
-            >
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 16px", borderTop: "1px solid var(--border)", background: "var(--card2)", flexShrink: 0 }}>
+            <button disabled={page <= 1} onClick={() => fetchMessages(page - 1)}
+              style={{ fontSize: 12, color: "var(--muted)", background: "none", border: "none", cursor: page <= 1 ? "default" : "pointer", opacity: page <= 1 ? 0.3 : 1 }}>
               ‹ Önceki
             </button>
-            <span className="text-xs text-muted-foreground">{page} / {totalPages}</span>
-            <button
-              disabled={page >= totalPages}
-              onClick={() => fetchMessages(page + 1)}
-              className="text-xs text-muted-foreground hover:text-foreground disabled:opacity-30"
-            >
+            <span style={{ fontSize: 12, color: "var(--muted)" }}>{page} / {totalPages}</span>
+            <button disabled={page >= totalPages} onClick={() => fetchMessages(page + 1)}
+              style={{ fontSize: 12, color: "var(--muted)", background: "none", border: "none", cursor: page >= totalPages ? "default" : "pointer", opacity: page >= totalPages ? 0.3 : 1 }}>
               Sonraki ›
             </button>
           </div>
         )}
       </div>
 
-      {/* Right: detail */}
+      {/* ── Sağ: mesaj detayı ── */}
       {selected ? (
-        <div className="flex-1 flex flex-col min-w-0 min-h-0 overflow-hidden">
-          {/* Detail header */}
-          <div className="flex items-center justify-between px-5 py-3 border-b border-border shrink-0">
-            <div className="flex items-center gap-3 min-w-0">
-              <button
-                onClick={() => setSelected(null)}
-                className="md:hidden p-1 rounded text-muted-foreground hover:text-foreground"
-              >
-                <ChevronLeft size={18} />
-              </button>
-              <div className="min-w-0">
-                <p className="text-sm font-semibold text-foreground truncate">{selected.subject || "(konu yok)"}</p>
-                <p className="text-xs text-muted-foreground truncate">
-                  {selected.fromName ? `${selected.fromName} <${selected.fromEmail}>` : selected.fromEmail}
-                  {" · "}{formatDate(selected.receivedAt)}
-                </p>
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0, minHeight: 0, overflow: "hidden" }}>
+
+          {/* Detay başlığı */}
+          <div style={{ padding: "16px 20px", borderBottom: "1px solid var(--border)", background: "var(--card2)", flexShrink: 0 }}>
+            <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
+              <div style={{ display: "flex", alignItems: "flex-start", gap: 12, minWidth: 0 }}>
+                <button onClick={() => setSelected(null)}
+                  className="md:hidden"
+                  style={{ padding: 4, borderRadius: 6, color: "var(--muted)", background: "none", border: "none", cursor: "pointer", flexShrink: 0, marginTop: 2 }}>
+                  <ChevronLeft size={18} />
+                </button>
+                {/* Avatar */}
+                <div style={{
+                  width: 42, height: 42, borderRadius: "50%", flexShrink: 0,
+                  background: avatarColor(selected.fromEmail) + "20",
+                  color: avatarColor(selected.fromEmail),
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  fontSize: 14, fontWeight: 700,
+                }}>
+                  {initials(selected.fromName, selected.fromEmail)}
+                </div>
+                <div style={{ minWidth: 0 }}>
+                  <p style={{ fontSize: 14, fontWeight: 600, color: "var(--text)", marginBottom: 3, lineHeight: 1.3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {selected.subject || "(konu yok)"}
+                  </p>
+                  <p style={{ fontSize: 12, color: "var(--muted)", marginBottom: 4 }}>
+                    {selected.fromName
+                      ? <><span style={{ color: "rgba(243,244,246,0.8)" }}>{selected.fromName}</span>{" "}<span>&lt;{selected.fromEmail}&gt;</span></>
+                      : selected.fromEmail
+                    }
+                  </p>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    <span style={{ fontSize: 11, color: "var(--muted)" }}>Alıcı: {selected.mailboxEmail}</span>
+                    <span style={{ color: "var(--border)", fontSize: 12 }}>·</span>
+                    <span style={{ fontSize: 11, color: "var(--muted)" }}>{formatDate(selected.receivedAt)}</span>
+                  </div>
+                </div>
               </div>
-            </div>
-            <div className="flex items-center gap-1 shrink-0">
-              <button
-                onClick={() => { setShowReply(r => !r); setReplyDone(false); }}
-                title="Yanıtla"
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-md bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
-              >
-                <Reply size={13} />
-                Yanıtla
-              </button>
-              <button
-                onClick={() => handleDelete(selected.id)}
-                title="Sil"
-                className="p-1.5 rounded text-muted-foreground hover:text-red-500 hover:bg-red-500/10 transition-colors"
-              >
-                <Trash2 size={15} />
-              </button>
+              {/* Aksiyonlar */}
+              <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
+                <button onClick={() => { setShowReply(r => !r); setReplyDone(false); }}
+                  style={{
+                    display: "flex", alignItems: "center", gap: 5, padding: "6px 12px",
+                    fontSize: 12, fontWeight: 500, borderRadius: 6, cursor: "pointer",
+                    background: "rgba(0,200,150,0.12)", color: "var(--primary)",
+                    border: "1px solid rgba(0,200,150,0.2)", transition: "background 0.15s",
+                  }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(0,200,150,0.2)"; }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(0,200,150,0.12)"; }}>
+                  <Reply size={13} />Yanıtla
+                </button>
+                <button onClick={() => handleDelete(selected.id)}
+                  style={{ padding: "6px", borderRadius: 6, color: "var(--muted)", background: "transparent", border: "none", cursor: "pointer", display: "flex", alignItems: "center" }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = "var(--danger)"; (e.currentTarget as HTMLButtonElement).style.background = "rgba(239,68,68,0.08)"; }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = "var(--muted)"; (e.currentTarget as HTMLButtonElement).style.background = "transparent"; }}>
+                  <Trash2 size={15} />
+                </button>
+              </div>
             </div>
           </div>
 
-          {/* Reply form */}
+          {/* Yanıt formu */}
           {showReply && (
-            <div className="px-5 py-3 border-b border-border bg-secondary/20 shrink-0">
-              <p className="text-xs text-muted-foreground mb-2">Yanıt — {selected.fromEmail}</p>
-              <textarea
-                value={replyBody}
-                onChange={e => setReplyBody(e.target.value)}
-                rows={4}
+            <div style={{ padding: "14px 20px", borderBottom: "1px solid var(--border)", background: "var(--card2)", flexShrink: 0 }}>
+              <p style={{ fontSize: 12, color: "var(--muted)", marginBottom: 8 }}>
+                Yanıt → <span style={{ color: "rgba(243,244,246,0.85)" }}>{selected.fromEmail}</span>
+              </p>
+              <textarea value={replyBody} onChange={e => setReplyBody(e.target.value)} rows={4}
                 placeholder="Yanıtınızı yazın…"
-                className="w-full text-sm bg-input border border-border rounded-lg px-3 py-2 text-foreground placeholder:text-muted-foreground resize-none focus:outline-none focus:ring-1 focus:ring-ring"
+                style={{
+                  width: "100%", fontSize: 13, background: "var(--input)", border: "1px solid var(--border)",
+                  borderRadius: 8, padding: "10px 12px", color: "var(--text)", resize: "none",
+                  outline: "none", fontFamily: "inherit", lineHeight: 1.6,
+                }}
               />
-              <div className="flex items-center gap-2 mt-2">
-                <button
-                  onClick={handleReply}
-                  disabled={replying || !replyBody.trim()}
-                  className="px-4 py-1.5 text-xs rounded-md bg-primary text-[oklch(0.11_0.005_260)] font-semibold disabled:opacity-50 hover:bg-primary/90 transition-colors"
-                >
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 10 }}>
+                <button onClick={handleReply} disabled={replying || !replyBody.trim()}
+                  style={{
+                    padding: "6px 16px", fontSize: 12, fontWeight: 600, borderRadius: 6,
+                    background: "var(--primary)", color: "#07090f", border: "none", cursor: "pointer",
+                    opacity: replying || !replyBody.trim() ? 0.5 : 1,
+                  }}>
                   {replying ? "Gönderiliyor…" : "Gönder"}
                 </button>
-                <button onClick={() => setShowReply(false)} className="text-xs text-muted-foreground hover:text-foreground">
+                <button onClick={() => setShowReply(false)}
+                  style={{ fontSize: 12, color: "var(--muted)", background: "none", border: "none", cursor: "pointer" }}>
                   İptal
                 </button>
               </div>
@@ -287,39 +354,49 @@ export default function InboxPanel({ onUnreadChange, autoOpenUnread }: Props) {
           )}
 
           {replyDone && (
-            <div className="px-5 py-2 text-xs text-green-500 bg-green-500/10 border-b border-green-500/20 shrink-0">
-              Yanıt gönderildi.
+            <div style={{ padding: "8px 20px", fontSize: 12, color: "#22c55e", background: "rgba(34,197,94,0.08)", borderBottom: "1px solid rgba(34,197,94,0.15)", display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
+              <CheckCheck size={13} />Yanıt başarıyla gönderildi.
             </div>
           )}
 
-          {/* Body */}
-          <div className="flex-1 overflow-y-auto px-5 py-4 min-h-0">
+          {/* Mesaj içeriği */}
+          <div style={{ flex: 1, overflowY: "auto", minHeight: 0 }}>
             {selected.bodyHtml ? (
-              <iframe
-                srcDoc={selected.bodyHtml}
-                sandbox=""
-                className="w-full border-0 rounded"
-                style={{ minHeight: 300, height: 1 }}
-                onLoad={e => {
-                  const f = e.currentTarget;
-                  try {
-                    const h = f.contentDocument?.documentElement.scrollHeight ?? f.contentDocument?.body.scrollHeight ?? 300;
-                    f.style.height = Math.max(h, 100) + "px";
-                  } catch { f.style.height = "400px"; }
-                }}
-              />
+              <div style={{ padding: 16 }}>
+                <div style={{ borderRadius: 10, overflow: "hidden", border: "1px solid var(--border)", background: "#fff" }}>
+                  <iframe
+                    srcDoc={selected.bodyHtml}
+                    sandbox=""
+                    style={{ width: "100%", border: "none", display: "block", minHeight: 300, height: 1 }}
+                    onLoad={e => {
+                      const f = e.currentTarget;
+                      try {
+                        const h = f.contentDocument?.documentElement.scrollHeight ?? f.contentDocument?.body.scrollHeight ?? 300;
+                        f.style.height = Math.max(h, 100) + "px";
+                      } catch { f.style.height = "400px"; }
+                    }}
+                  />
+                </div>
+              </div>
             ) : (
-              <pre className="text-sm text-foreground whitespace-pre-wrap font-sans leading-relaxed">
-                {selected.bodyText || "(içerik yok)"}
-              </pre>
+              <div style={{ padding: 20 }}>
+                <div style={{ background: "var(--card2)", border: "1px solid var(--border)", borderRadius: 10, padding: "16px 20px" }}>
+                  <pre style={{ fontSize: 13, color: "var(--text)", whiteSpace: "pre-wrap", fontFamily: "inherit", lineHeight: 1.7, margin: 0 }}>
+                    {selected.bodyText || "(içerik yok)"}
+                  </pre>
+                </div>
+              </div>
             )}
           </div>
         </div>
       ) : (
-        <div className="hidden md:flex flex-1 items-center justify-center text-sm text-muted-foreground">
-          <div className="flex flex-col items-center gap-2">
-            <MailOpen size={32} className="opacity-20" />
-            Bir mesaj seçin
+        <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center" }}
+          className="hidden md:flex">
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12, color: "var(--muted)" }}>
+            <div style={{ width: 56, height: 56, borderRadius: "50%", background: "var(--card2)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <MailOpen size={24} style={{ opacity: 0.3 }} />
+            </div>
+            <p style={{ fontSize: 13 }}>Okumak için bir mesaj seçin</p>
           </div>
         </div>
       )}
