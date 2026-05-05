@@ -157,7 +157,9 @@ export default function AdminPanel({ currentUserId }: { currentUserId?: number |
     setPermLoading(true);
     try {
       const r = await adminAPI.getPermissions(user.id);
-      setPermSelected(r.data.permissions);
+      // null (eski süper admin) → tüm yetkiler dizisine çevir
+      const perms = r.data.permissions;
+      setPermSelected(perms === null ? [...ALL_PERMISSIONS] : perms);
     } catch {
       setPermSelected([]);
     } finally {
@@ -166,7 +168,6 @@ export default function AdminPanel({ currentUserId }: { currentUserId?: number |
   };
 
   const handleTogglePerm = (perm: string) => {
-    if (permSelected === null) return;
     setPermSelected(prev =>
       prev === null ? [perm] : prev.includes(perm) ? prev.filter(p => p !== perm) : [...prev, perm]
     );
@@ -178,7 +179,8 @@ export default function AdminPanel({ currentUserId }: { currentUserId?: number |
     try {
       const currentIsAdmin = users.find(u => u.id === permModal.userId)?.isAdmin === 1;
       if (permIsAdmin !== currentIsAdmin) await adminAPI.toggleAdmin(permModal.userId);
-      await adminAPI.setPermissions(permModal.userId, permSelected);
+      // Her zaman dizi kaydet, null (süper admin) kavramı artık yok
+      await adminAPI.setPermissions(permModal.userId, permSelected ?? []);
       setPermModal(null);
       load();
     } catch {
@@ -344,11 +346,14 @@ export default function AdminPanel({ currentUserId }: { currentUserId?: number |
                           {isSelf && (
                             <span className="text-[10px] bg-primary/15 text-primary px-2 py-0.5 rounded-full font-semibold shrink-0">Yönetici (Siz)</span>
                           )}
-                          {!isSelf && user.isAdmin === 1 && (
-                            <span className="text-[10px] bg-yellow-500/15 text-yellow-500 px-1.5 py-0.5 rounded-full shrink-0">
-                              {perms === null ? "süper admin" : "admin"}
-                            </span>
-                          )}
+                          {!isSelf && user.isAdmin === 1 && (() => {
+                            const isModerator = perms !== null && perms.length > 0 && perms.every(p => p === "credits");
+                            return isModerator ? (
+                              <span className="text-[10px] bg-blue-500/15 text-blue-400 px-1.5 py-0.5 rounded-full shrink-0">moderatör</span>
+                            ) : (
+                              <span className="text-[10px] bg-yellow-500/15 text-yellow-500 px-1.5 py-0.5 rounded-full shrink-0">admin</span>
+                            );
+                          })()}
                           {user.emailVerified === 0 && (
                             <span className="text-[10px] bg-secondary text-muted-foreground px-1.5 py-0.5 rounded-full shrink-0">doğrulanmadı</span>
                           )}
@@ -556,7 +561,13 @@ export default function AdminPanel({ currentUserId }: { currentUserId?: number |
                     <p className="text-xs text-muted-foreground">Admin paneline erişim sağlar</p>
                   </div>
                   <button
-                    onClick={() => setPermIsAdmin(v => !v)}
+                    onClick={() => {
+                      const next = !permIsAdmin;
+                      setPermIsAdmin(next);
+                      if (next && (!permSelected || permSelected.length === 0)) {
+                        setPermSelected([...ALL_PERMISSIONS]);
+                      }
+                    }}
                     className={`w-10 h-5 rounded-full transition-colors relative ${permIsAdmin ? "bg-primary" : "bg-muted"}`}
                   >
                     <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${permIsAdmin ? "translate-x-5" : "translate-x-0.5"}`} />
@@ -565,40 +576,22 @@ export default function AdminPanel({ currentUserId }: { currentUserId?: number |
 
                 {/* Yetki listesi */}
                 {permIsAdmin && (
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <p className="text-xs font-medium text-muted-foreground">Yetkiler</p>
+                  <div className="space-y-1.5">
+                    <p className="text-xs font-medium text-muted-foreground pb-0.5">Yetkiler</p>
+                    {ALL_PERMISSIONS.map(perm => (
                       <button
-                        onClick={() => setPermSelected(permSelected === null ? [] : null)}
-                        className="text-xs text-primary hover:underline"
+                        key={perm}
+                        onClick={() => handleTogglePerm(perm)}
+                        className={`w-full flex items-center justify-between px-3 py-2 rounded-lg border text-xs transition-colors ${
+                          (permSelected ?? []).includes(perm)
+                            ? "bg-primary/10 border-primary/20 text-primary"
+                            : "border-border text-muted-foreground hover:bg-secondary"
+                        }`}
                       >
-                        {permSelected === null ? "Kısıtlı Yap" : "Süper Admin Yap"}
+                        <span>{PERM_LABELS[perm]}</span>
+                        {(permSelected ?? []).includes(perm) && <Check size={12} />}
                       </button>
-                    </div>
-
-                    {permSelected === null ? (
-                      <div className="flex items-center gap-2 px-3 py-2 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
-                        <ShieldCheck size={13} className="text-yellow-500 shrink-0" />
-                        <p className="text-xs text-yellow-600 dark:text-yellow-400">Tüm yetkilere sahip (Süper Admin)</p>
-                      </div>
-                    ) : (
-                      <div className="space-y-1.5">
-                        {ALL_PERMISSIONS.map(perm => (
-                          <button
-                            key={perm}
-                            onClick={() => handleTogglePerm(perm)}
-                            className={`w-full flex items-center justify-between px-3 py-2 rounded-lg border text-xs transition-colors ${
-                              permSelected.includes(perm)
-                                ? "bg-primary/10 border-primary/20 text-primary"
-                                : "border-border text-muted-foreground hover:bg-secondary"
-                            }`}
-                          >
-                            <span>{PERM_LABELS[perm]}</span>
-                            {permSelected.includes(perm) && <Check size={12} />}
-                          </button>
-                        ))}
-                      </div>
-                    )}
+                    ))}
                   </div>
                 )}
 
