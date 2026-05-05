@@ -50,9 +50,10 @@ export default function UserLoginScreen({ onLogin, onGoRegister, onGoAdminLogin 
     setLoading(true);
     try {
       const r = await userAPI.verifyOtp(otpUserId, otp.trim());
-      const { token, expiresAt, user } = r.data;
+      const { token, expiresAt, user, deviceId } = r.data;
       localStorage.setItem("authToken", token);
       localStorage.setItem("authExpiry", expiresAt);
+      if (deviceId) localStorage.setItem("deviceId", deviceId);
       onLogin(token, expiresAt, user);
     } catch (e: unknown) {
       const msg = (e as { response?: { data?: { error?: string } } })?.response?.data?.error;

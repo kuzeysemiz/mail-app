@@ -98,6 +98,7 @@ export default function Home() {
     await authSessionAPI.logout();
     localStorage.removeItem("authToken");
     localStorage.removeItem("authExpiry");
+    localStorage.removeItem("deviceId");
     setScreen("login");
   };
 

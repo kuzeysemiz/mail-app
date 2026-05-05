@@ -124,11 +124,12 @@ router.post('/verify-otp', (req, res) => {
 
       const token = randomToken();
       const expiresAt = new Date(Date.now() + SESSION_DAYS * 24 * 60 * 60 * 1000).toISOString();
+      const deviceId = `user_${user.id}_${Date.now()}`;
 
       db.run(
         `INSERT INTO sessions (deviceId, deviceName, token, expiresAt, userId, isAdmin)
          VALUES (?, 'Web', ?, ?, ?, ?)`,
-        [`user_${user.id}_${Date.now()}`, token, expiresAt, user.id, user.isAdmin],
+        [deviceId, token, expiresAt, user.id, user.isAdmin],
         err => {
           if (err) return res.status(500).json({ error: 'Oturum oluşturulamadı' });
           logger.info(`Kullanıcı girişi (OTP): ${user.email}`);
@@ -136,6 +137,7 @@ router.post('/verify-otp', (req, res) => {
             success: true,
             token,
             expiresAt,
+            deviceId,
             user: { id: user.id, email: user.email, isAdmin: user.isAdmin, emailVerified: user.emailVerified },
           });
         }

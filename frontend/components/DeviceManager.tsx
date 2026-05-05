@@ -13,12 +13,24 @@ interface Session {
 }
 
 export default function DeviceManager() {
-  const [sessions, setSessions] = useState<Session[]>([]);
-  const [loading, setLoading]   = useState(true);
-  const [msg, setMsg]           = useState({ text: "", type: "" });
-  const currentDeviceId = typeof window !== "undefined" ? localStorage.getItem("deviceId") : null;
+  const [sessions, setSessions]       = useState<Session[]>([]);
+  const [loading, setLoading]         = useState(true);
+  const [msg, setMsg]                 = useState({ text: "", type: "" });
+  const [currentDeviceId, setCurrentDeviceId] = useState<string | null>(
+    typeof window !== "undefined" ? localStorage.getItem("deviceId") : null
+  );
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    // API'den güncel session'ın deviceId'sini al (localStorage eksik olabilir)
+    authAPI.me().then(r => {
+      const id = r.data.session?.deviceId;
+      if (id) {
+        setCurrentDeviceId(id);
+        localStorage.setItem("deviceId", id);
+      }
+    }).catch(() => {});
+    load();
+  }, []);
 
   const load = async () => {
     setLoading(true);
