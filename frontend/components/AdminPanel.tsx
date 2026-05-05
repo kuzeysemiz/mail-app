@@ -69,9 +69,11 @@ export default function AdminPanel({ currentUserId }: { currentUserId?: number |
 
   const load = useCallback(() => {
     setLoading(true);
-    Promise.all([adminAPI.getUsers(), adminAPI.getStats()])
-      .then(([u, s]) => { setUsers(u.data); setStats(s.data); })
-      .catch(() => {})
+    Promise.allSettled([adminAPI.getUsers(), adminAPI.getStats()])
+      .then(([u, s]) => {
+        if (u.status === "fulfilled") setUsers(u.value.data);
+        if (s.status === "fulfilled") setStats(s.value.data);
+      })
       .finally(() => setLoading(false));
   }, []);
 

@@ -15,8 +15,16 @@ const PERMISSION_LABELS = {
 };
 
 function requireAdmin(req, res, next) {
-  if (!req.isAdmin) return res.status(403).json({ error: 'Yetki gerekli' });
-  next();
+  // Legacy OTP admin (userId=null) — session yeterli
+  if (!req.userId) {
+    if (!req.isAdmin) return res.status(403).json({ error: 'Yetki gerekli' });
+    return next();
+  }
+  // Kullanıcı bazlı admin: session cache'i değil DB'yi oku (yetki sonradan verilmiş olabilir)
+  db.get(`SELECT isAdmin FROM users WHERE id = ?`, [req.userId], (err, row) => {
+    if (!row || !row.isAdmin) return res.status(403).json({ error: 'Yetki gerekli' });
+    next();
+  });
 }
 
 // null permissions = super admin (tüm yetkiler)
