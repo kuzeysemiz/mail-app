@@ -71,20 +71,26 @@ function randomOtp() {
   return String(Math.floor(100000 + Math.random() * 900000));
 }
 
-async function getFounderMailbox() {
-  return new Promise(r => db.get(`SELECT email, appPassword FROM mailboxes WHERE userId IS NULL LIMIT 1`, (_, row) => r(row)));
+async function getSenderMailbox() {
+  // Önce userId=NULL (kurucu) mailbox'ı dene, yoksa herhangi birini kullan
+  return new Promise(r =>
+    db.get(`SELECT email, appPassword FROM mailboxes WHERE userId IS NULL LIMIT 1`, (_, row) => {
+      if (row) return r(row);
+      db.get(`SELECT email, appPassword FROM mailboxes LIMIT 1`, (_, row2) => r(row2));
+    })
+  );
 }
 
 async function sendAdminEmail(toEmail, subject, html) {
-  const mb = await getFounderMailbox();
+  const mb = await getSenderMailbox();
   if (!mb) return;
   const ms = new MailService(mb.email, mb.appPassword);
   await ms.sendMail(toEmail, subject, html).catch(() => {});
 }
 
-// Kurucu admin (server sahibi) emailini döner
+// Kurucu admin (server sahibi) emailini döner — userId=NULL mailbox yoksa ilk mailbox'ı kullan
 async function getFounderEmail() {
-  const mb = await getFounderMailbox();
+  const mb = await getSenderMailbox();
   return mb ? mb.email : null;
 }
 
