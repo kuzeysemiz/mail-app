@@ -184,7 +184,7 @@ export default function Home() {
 
         <main className={cn(
           "flex-1 min-h-0",
-          activeTab === "inbox" ? "flex flex-col overflow-hidden p-4 lg:p-6" : "overflow-y-auto p-6 lg:p-8"
+          activeTab === "inbox" ? "flex flex-col overflow-hidden" : "overflow-y-auto p-6 lg:p-8"
         )}>
           {activeTab === "mailbox"   && <MailboxManager />}
           {activeTab === "add"       && <EmailAdder />}

@@ -127,10 +127,10 @@ export default function InboxPanel({ onUnreadChange, autoOpenUnread }: Props) {
   const totalPages = Math.ceil(total / LIMIT);
 
   return (
-    <div className="flex h-full gap-0 bg-card border border-border rounded-xl overflow-hidden" style={{ minHeight: 0 }}>
+    <div className="flex flex-1 min-h-0 gap-0 bg-card border border-border rounded-xl overflow-hidden">
       {/* Left: message list */}
       <div className={cn(
-        "flex flex-col border-r border-border",
+        "flex flex-col border-r border-border min-h-0",
         selected ? "hidden md:flex md:w-80 shrink-0" : "flex-1"
       )}>
         {/* List header */}
@@ -219,7 +219,7 @@ export default function InboxPanel({ onUnreadChange, autoOpenUnread }: Props) {
 
       {/* Right: detail */}
       {selected ? (
-        <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+        <div className="flex-1 flex flex-col min-w-0 min-h-0 overflow-hidden">
           {/* Detail header */}
           <div className="flex items-center justify-between px-5 py-3 border-b border-border shrink-0">
             <div className="flex items-center gap-3 min-w-0">
@@ -289,20 +289,25 @@ export default function InboxPanel({ onUnreadChange, autoOpenUnread }: Props) {
           )}
 
           {/* Body */}
-          <div className="flex-1 overflow-y-auto px-5 py-4">
+          <div className="flex-1 overflow-y-auto px-5 py-4 min-h-0">
             {selected.bodyHtml ? (
               <iframe
                 srcDoc={selected.bodyHtml}
-                sandbox="allow-same-origin"
+                sandbox=""
                 className="w-full border-0 rounded"
-                style={{ minHeight: 400, height: "100%" }}
+                style={{ minHeight: 300, height: 1 }}
                 onLoad={e => {
                   const f = e.currentTarget;
-                  try { f.style.height = f.contentDocument!.body.scrollHeight + "px"; } catch {}
+                  try {
+                    const h = f.contentDocument?.documentElement.scrollHeight ?? f.contentDocument?.body.scrollHeight ?? 300;
+                    f.style.height = Math.max(h, 100) + "px";
+                  } catch { f.style.height = "400px"; }
                 }}
               />
             ) : (
-              <pre className="text-sm text-foreground whitespace-pre-wrap font-sans">{selected.bodyText || "(içerik yok)"}</pre>
+              <pre className="text-sm text-foreground whitespace-pre-wrap font-sans leading-relaxed">
+                {selected.bodyText || "(içerik yok)"}
+              </pre>
             )}
           </div>
         </div>
