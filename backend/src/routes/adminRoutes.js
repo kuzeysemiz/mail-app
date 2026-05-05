@@ -71,24 +71,20 @@ function randomOtp() {
   return String(Math.floor(100000 + Math.random() * 900000));
 }
 
-async function getAdminMailbox() {
-  return new Promise(r => db.get(`SELECT email, appPassword FROM mailboxes LIMIT 1`, (_, row) => r(row)));
+async function getFounderMailbox() {
+  return new Promise(r => db.get(`SELECT email, appPassword FROM mailboxes WHERE userId IS NULL LIMIT 1`, (_, row) => r(row)));
 }
 
 async function sendAdminEmail(toEmail, subject, html) {
-  const mb = await getAdminMailbox();
+  const mb = await getFounderMailbox();
   if (!mb) return;
   const ms = new MailService(mb.email, mb.appPassword);
   await ms.sendMail(toEmail, subject, html).catch(() => {});
 }
 
-// Admin emailini bul: userId varsa users tablosundan, yoksa (legacy OTP admin) ilk mailbox emailini kullan
-async function getAdminEmail(userId) {
-  if (userId) {
-    const row = await new Promise(r => db.get(`SELECT email FROM users WHERE id = ?`, [userId], (_, r2) => r(r2)));
-    if (row) return row.email;
-  }
-  const mb = await getAdminMailbox();
+// Kurucu admin (server sahibi) emailini döner
+async function getFounderEmail() {
+  const mb = await getFounderMailbox();
   return mb ? mb.email : null;
 }
 
@@ -121,8 +117,8 @@ router.delete('/users/:id', requireAuth, requireAdmin, requirePerm('users'), asy
   const target = await new Promise(r => db.get(`SELECT id, email FROM users WHERE id = ?`, [targetId], (_, row) => r(row)));
   if (!target) return res.status(404).json({ error: 'Kullanıcı bulunamadı' });
 
-  const adminEmail = await getAdminEmail(req.userId);
-  if (!adminEmail) return res.status(403).json({ error: 'Admin e-postası bulunamadı' });
+  const founderEmail = await getFounderEmail();
+  if (!founderEmail) return res.status(403).json({ error: 'Kurucu yönetici e-postası bulunamadı' });
 
   const otp = randomOtp();
   const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
@@ -134,7 +130,7 @@ router.delete('/users/:id', requireAuth, requireAdmin, requirePerm('users'), asy
     async function(err) {
       if (err) return res.status(500).json({ error: 'İşlem oluşturulamadı' });
 
-      await sendAdminEmail(adminEmail, 'Kullanıcı Silme Onayı', `
+      await sendAdminEmail(founderEmail, 'Kullanıcı Silme Onayı', `
         <div style="font-family:sans-serif;max-width:480px;margin:40px auto;padding:32px;border:1px solid #e5e7eb;border-radius:12px;">
           <h2 style="margin:0 0 16px;color:#111827;">Kullanıcı Silme Onayı</h2>
           <p style="color:#6b7280;margin:0 0 8px;"><strong>${target.email}</strong> adlı kullanıcıyı silmek için aşağıdaki kodu girin. Kod 10 dakika geçerlidir.</p>
@@ -143,7 +139,7 @@ router.delete('/users/:id', requireAuth, requireAdmin, requirePerm('users'), asy
         </div>
       `);
 
-      logger.info(`Kullanıcı silme OTP gönderildi: admin=${adminEmail}, target=${target.email}`);
+      logger.info(`Kullanıcı silme OTP gönderildi: founder=${founderEmail}, target=${target.email}`);
       res.json({ success: true, actionId: this.lastID });
     }
   );
@@ -221,14 +217,14 @@ router.post('/users/:id/credits', requireAuth, requireAdmin, requirePerm('credit
   const target = await new Promise(r => db.get(`SELECT id, email FROM users WHERE id = ?`, [targetId], (_, row) => r(row)));
   if (!target) return res.status(404).json({ error: 'Kullanıcı bulunamadı' });
 
-  const adminEmail = await getAdminEmail(req.userId);
-  if (!adminEmail) return res.status(403).json({ error: 'Admin e-postası bulunamadı' });
+  const founderEmail = await getFounderEmail();
+  if (!founderEmail) return res.status(403).json({ error: 'Kurucu yönetici e-postası bulunamadı' });
 
   const token = randomToken();
   const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
   const amountNum = parseInt(amount);
-  const appUrl = process.env.APP_URL || 'http://localhost:3000';
-  const confirmLink = `${appUrl}/api/admin/credits/confirm/${token}`;
+  const backendUrl = process.env.BACKEND_URL || `http://localhost:${process.env.PORT || 5000}`;
+  const confirmLink = `${backendUrl}/api/admin/credits/confirm/${token}`;
 
   db.run(
     `INSERT INTO pending_admin_actions (adminId, action, targetId, data, token, expiresAt)
@@ -238,7 +234,7 @@ router.post('/users/:id/credits', requireAuth, requireAdmin, requirePerm('credit
       if (err) return res.status(500).json({ error: 'İşlem oluşturulamadı' });
 
       const actionLabel = amountNum > 0 ? `+${amountNum}` : `${amountNum}`;
-      await sendAdminEmail(adminEmail, 'Kredi Transferi Onayı', `
+      await sendAdminEmail(founderEmail, 'Kredi Transferi Onayı', `
         <div style="font-family:sans-serif;max-width:480px;margin:40px auto;padding:32px;border:1px solid #e5e7eb;border-radius:12px;">
           <h2 style="margin:0 0 16px;color:#111827;">Kredi Transferi Onayı</h2>
           <p style="color:#6b7280;margin:0 0 8px;"><strong>${target.email}</strong> kullanıcısına <strong>${actionLabel} kredi</strong> göndermek istiyorsunuz.</p>
@@ -249,7 +245,7 @@ router.post('/users/:id/credits', requireAuth, requireAdmin, requirePerm('credit
         </div>
       `);
 
-      logger.info(`Kredi onay maili gönderildi: admin=${adminEmail}, target=${target.email}, amount=${amountNum}`);
+      logger.info(`Kredi onay maili gönderildi: founder=${founderEmail}, target=${target.email}, amount=${amountNum}`);
       res.json({ success: true, pending: true });
     }
   );
