@@ -210,7 +210,7 @@ router.get('/me', requireAuth, (req, res) => {
   if (req.isAdmin && !req.userId) {
     return res.json({ success: true, user: { isAdmin: true }, credits: null });
   }
-  db.get(`SELECT id, email, isAdmin, emailVerified, createdAt FROM users WHERE id = ?`, [req.userId], (err, user) => {
+  db.get(`SELECT id, email, isAdmin, emailVerified, createdAt, permissions FROM users WHERE id = ?`, [req.userId], (err, user) => {
     if (!user) return res.status(404).json({ error: 'Kullanıcı bulunamadı' });
     db.get(`SELECT balance FROM user_credits WHERE userId = ?`, [req.userId], (_, credits) => {
       res.json({ success: true, user, credits: credits?.balance ?? 0 });

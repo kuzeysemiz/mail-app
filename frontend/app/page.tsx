@@ -31,7 +31,7 @@ const PAGE_TITLES: Record<string, string> = {
   blacklist: "Kara Liste & Beyaz Liste",
   deploy:    "Deploy Monitörü",
   devices:   "Bağlı Cihazlar",
-  admin:     "Admin Paneli",
+  admin:     "Yönetici Paneli",
   credits:   "Krediler",
 };
 
@@ -41,6 +41,7 @@ export default function Home() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isAdmin, setIsAdmin]       = useState(false);
   const [currentUserId, setCurrentUserId] = useState<number | null>(null);
+  const [currentUserPermissions, setCurrentUserPermissions] = useState<string[] | null>(null);
   const [credits, setCredits]       = useState<number | null>(null);
   const [unreadInbox, setUnreadInbox]       = useState(0);
   const [inboxOpenKey, setInboxOpenKey]     = useState(0);
@@ -60,6 +61,12 @@ export default function Home() {
       .then(r => {
         setIsAdmin(r.data.user?.isAdmin === 1 || r.data.user?.isAdmin === true);
         setCurrentUserId(r.data.user?.id ?? null);
+        const rawPerms = r.data.user?.permissions;
+        if (rawPerms === undefined || rawPerms === null) {
+          setCurrentUserPermissions(null); // kurucu admin veya eski kayıt = tüm yetkiler
+        } else {
+          try { setCurrentUserPermissions(JSON.parse(rawPerms)); } catch { setCurrentUserPermissions([]); }
+        }
         if (typeof r.data.credits === 'number') setCredits(r.data.credits);
         setScreen("app");
       })
@@ -194,7 +201,7 @@ export default function Home() {
           {activeTab === "blacklist" && <BlacklistManager />}
           {activeTab === "deploy"    && <DeployMonitor />}
           {activeTab === "devices"   && <DeviceManager />}
-          {activeTab === "admin"     && <AdminPanel currentUserId={currentUserId} />}
+          {activeTab === "admin"     && <AdminPanel currentUserId={currentUserId} currentUserPermissions={currentUserPermissions} />}
           {activeTab === "inbox"     && <InboxPanel key={inboxOpenKey} onUnreadChange={setUnreadInbox} autoOpenUnread={inboxAutoOpen} />}
           {activeTab === "credits"   && <CreditsPanel onCreditsChange={setCredits} />}
         </main>

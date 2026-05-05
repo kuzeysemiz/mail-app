@@ -29,7 +29,10 @@ function parsePermissions(raw: string | null): string[] | null {
   try { return JSON.parse(raw); } catch { return []; }
 }
 
-export default function AdminPanel({ currentUserId }: { currentUserId?: number | null }) {
+export default function AdminPanel({ currentUserId, currentUserPermissions }: {
+  currentUserId?: number | null;
+  currentUserPermissions?: string[] | null;
+}) {
   const [users, setUsers]     = useState<User[]>([]);
   const [stats, setStats]     = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -208,6 +211,16 @@ export default function AdminPanel({ currentUserId }: { currentUserId?: number |
 
   const filtered = users.filter(u => u.email.toLowerCase().includes(q.toLowerCase()));
 
+  // Mevcut kullanıcının yetki hesaplamaları
+  // currentUserId === null → kurucu admin (tüm yetkiler)
+  // currentUserPermissions === null → eski süper admin kaydı (tüm yetkiler)
+  const curPerms: string[] = (currentUserId === null || currentUserPermissions === null)
+    ? [...ALL_PERMISSIONS]
+    : (currentUserPermissions ?? []);
+  const isCurrentFullAdmin = ALL_PERMISSIONS.every(p => curPerms.includes(p));
+  const canCreditOp        = curPerms.includes("credits");
+  const canUserOp          = curPerms.includes("users");
+
   return (
     <div className="space-y-6">
       {/* Sekme toggle */}
@@ -336,8 +349,10 @@ export default function AdminPanel({ currentUserId }: { currentUserId?: number |
               <div className="divide-y divide-border">
                 {filtered.map((user, idx) => {
                   const perms = parsePermissions(user.permissions);
-                  const isSelf = currentUserId != null && user.id === currentUserId;
-                  const isLocked = isSelf || user.isFounder;
+                  const permsArr: string[] = perms === null ? [...ALL_PERMISSIONS] : (perms ?? []);
+                  const isUserFullAdmin = ALL_PERMISSIONS.every(p => permsArr.includes(p));
+                  const isSelf    = currentUserId != null && user.id === currentUserId;
+                  const isLocked  = isSelf || user.isFounder;
                   return (
                     <div key={user.id ?? `founder-${idx}`} className={`flex items-center gap-4 px-5 py-3.5 transition-colors ${isSelf ? "bg-primary/5 border-l-2 border-primary" : user.isFounder ? "bg-secondary/30" : "hover:bg-secondary/20"}`}>
                       <div className="flex-1 min-w-0">
@@ -346,14 +361,11 @@ export default function AdminPanel({ currentUserId }: { currentUserId?: number |
                           {isSelf && (
                             <span className="text-[10px] bg-primary/15 text-primary px-2 py-0.5 rounded-full font-semibold shrink-0">Yönetici (Siz)</span>
                           )}
-                          {!isSelf && user.isAdmin === 1 && (() => {
-                            const isModerator = perms !== null && perms.length > 0 && perms.every(p => p === "credits");
-                            return isModerator ? (
-                              <span className="text-[10px] bg-blue-500/15 text-blue-400 px-1.5 py-0.5 rounded-full shrink-0">moderatör</span>
-                            ) : (
-                              <span className="text-[10px] bg-yellow-500/15 text-yellow-500 px-1.5 py-0.5 rounded-full shrink-0">admin</span>
-                            );
-                          })()}
+                          {!isSelf && user.isAdmin === 1 && (
+                            isUserFullAdmin
+                              ? <span className="text-[10px] bg-yellow-500/15 text-yellow-500 px-1.5 py-0.5 rounded-full shrink-0">admin</span>
+                              : <span className="text-[10px] bg-blue-500/15 text-blue-400 px-1.5 py-0.5 rounded-full shrink-0">moderatör</span>
+                          )}
                           {user.emailVerified === 0 && (
                             <span className="text-[10px] bg-secondary text-muted-foreground px-1.5 py-0.5 rounded-full shrink-0">doğrulanmadı</span>
                           )}
@@ -361,9 +373,9 @@ export default function AdminPanel({ currentUserId }: { currentUserId?: number |
                         <p className="text-xs text-muted-foreground mt-0.5">
                           {user.createdAt ? new Date(user.createdAt).toLocaleDateString("tr-TR") : "—"}
                           {user.credits !== null ? ` · ${user.credits} kredi` : ""}
-                          {user.isAdmin === 1 && perms !== null && perms.length > 0 && (
+                          {user.isAdmin === 1 && permsArr.length > 0 && !isUserFullAdmin && (
                             <span className="ml-1 text-muted-foreground/60">
-                              · {perms.map(p => PERM_LABELS[p] || p).join(", ")}
+                              · {permsArr.map(p => PERM_LABELS[p] || p).join(", ")}
                             </span>
                           )}
                         </p>
@@ -372,27 +384,33 @@ export default function AdminPanel({ currentUserId }: { currentUserId?: number |
                         <span className="text-[11px] font-bold text-red-500 tracking-wide shrink-0">YÖNETİCİ</span>
                       ) : (
                         <div className="flex items-center gap-1 shrink-0">
-                          <button
-                            onClick={() => { setCreditModal({ userId: user.id!, email: user.email }); setCreditAmount(""); setCreditDesc(""); setCreditSent(false); }}
-                            className="p-2 border border-border rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
-                            title="Kredi Güncelle"
-                          >
-                            <Coins size={13} />
-                          </button>
-                          <button
-                            onClick={() => openPermModal(user as User & { id: number })}
-                            className="p-2 border border-border rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
-                            title="Yetki Yönet"
-                          >
-                            <Shield size={13} />
-                          </button>
-                          <button
-                            onClick={() => { setDeleteModal({ userId: user.id!, email: user.email }); setDeleteStep("confirm"); setDeleteOtp(""); setDeleteError(""); }}
-                            className="p-2 border border-destructive/30 rounded-lg text-destructive/60 hover:text-destructive hover:bg-destructive/10 transition-colors"
-                            title="Kullanıcıyı Sil"
-                          >
-                            <Trash2 size={13} />
-                          </button>
+                          {canCreditOp && (
+                            <button
+                              onClick={() => { setCreditModal({ userId: user.id!, email: user.email }); setCreditAmount(""); setCreditDesc(""); setCreditSent(false); }}
+                              className="p-2 border border-border rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+                              title="Kredi Güncelle"
+                            >
+                              <Coins size={13} />
+                            </button>
+                          )}
+                          {isCurrentFullAdmin && (
+                            <button
+                              onClick={() => openPermModal(user as User & { id: number })}
+                              className="p-2 border border-border rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+                              title="Yetki Yönet"
+                            >
+                              <Shield size={13} />
+                            </button>
+                          )}
+                          {canUserOp && (
+                            <button
+                              onClick={() => { setDeleteModal({ userId: user.id!, email: user.email }); setDeleteStep("confirm"); setDeleteOtp(""); setDeleteError(""); }}
+                              className="p-2 border border-destructive/30 rounded-lg text-destructive/60 hover:text-destructive hover:bg-destructive/10 transition-colors"
+                              title="Kullanıcıyı Sil"
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                          )}
                         </div>
                       )}
                     </div>

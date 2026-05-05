@@ -99,7 +99,7 @@ export default function Sidebar({ activeTab, onTabChange, isOpen, onClose, isAdm
               )}
             >
               <Settings2 size={17} />
-              Admin
+              Yönetici Paneli
             </button>
           )}
         </nav>

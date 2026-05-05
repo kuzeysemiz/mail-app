@@ -27,27 +27,40 @@ function requireAdmin(req, res, next) {
   });
 }
 
-// null permissions = super admin (tüm yetkiler)
-function hasPermission(permissions, perm) {
-  if (permissions === null || permissions === undefined) return true;
-  try {
-    const arr = typeof permissions === 'string' ? JSON.parse(permissions) : permissions;
-    return Array.isArray(arr) && arr.includes(perm);
-  } catch { return false; }
+function parsePerms(raw) {
+  if (raw === null || raw === undefined) return null; // null = tüm yetkiler
+  try { return JSON.parse(raw); } catch { return []; }
 }
 
+function hasPerm(raw, perm) {
+  const arr = parsePerms(raw);
+  if (arr === null) return true;
+  return Array.isArray(arr) && arr.includes(perm);
+}
+
+// Belirli bir yetkiyi kontrol et
 function requirePerm(perm) {
   return (req, res, next) => {
-    // userId olmayan eski OTP admin sessionları = süper admin, her şeye erişir
-    if (!req.userId) return next();
+    if (!req.userId) return next(); // kurucu admin
     db.get(`SELECT permissions FROM users WHERE id = ?`, [req.userId], (_, row) => {
       if (!row) return res.status(403).json({ error: 'Yetkisiz' });
-      if (!hasPermission(row.permissions, perm)) {
+      if (!hasPerm(row.permissions, perm))
         return res.status(403).json({ error: `Bu işlem için '${PERMISSION_LABELS[perm]}' yetkisi gerekli` });
-      }
       next();
     });
   };
+}
+
+// Tam yönetici: tüm 4 yetki seçili veya kurucu admin
+function requireFullAdmin(req, res, next) {
+  if (!req.userId) return next(); // kurucu admin
+  db.get(`SELECT permissions FROM users WHERE id = ?`, [req.userId], (_, row) => {
+    if (!row) return res.status(403).json({ error: 'Yetkisiz' });
+    const perms = parsePerms(row.permissions);
+    const isFull = perms === null || PERMISSIONS.every(p => perms.includes(p));
+    if (!isFull) return res.status(403).json({ error: 'Bu işlem için tam yönetici yetkisi gerekli' });
+    next();
+  });
 }
 
 function randomToken() {
@@ -79,8 +92,8 @@ async function getAdminEmail(userId) {
   return mb ? mb.email : null;
 }
 
-// ── Tüm kullanıcılar ──────────────────────────────────────────────────────────
-router.get('/users', requireAuth, requireAdmin, requirePerm('users'), (req, res) => {
+// ── Tüm kullanıcılar — herhangi bir admin görebilir ──────────────────────────
+router.get('/users', requireAuth, requireAdmin, (req, res) => {
   db.all(
     `SELECT u.id, u.email, u.isAdmin, u.emailVerified, u.createdAt, u.permissions,
             COALESCE(uc.balance, 0) as credits
@@ -100,7 +113,7 @@ router.get('/users', requireAuth, requireAdmin, requirePerm('users'), (req, res)
   );
 });
 
-// ── Kullanıcı sil — OTP iste ─────────────────────────────────────────────────
+// ── Kullanıcı sil — OTP iste — 'users' yetkisi gerekli ──────────────────────
 router.delete('/users/:id', requireAuth, requireAdmin, requirePerm('users'), async (req, res) => {
   const targetId = parseInt(req.params.id);
   if (targetId === req.userId) return res.status(400).json({ error: 'Kendinizi silemezsiniz' });
@@ -159,8 +172,8 @@ router.post('/users/:id/delete-confirm', requireAuth, requireAdmin, requirePerm(
   );
 });
 
-// ── Kullanıcı yetkilerini getir ───────────────────────────────────────────────
-router.get('/users/:id/permissions', requireAuth, requireAdmin, requirePerm('users'), (req, res) => {
+// ── Kullanıcı yetkilerini getir — tam admin gerekli ──────────────────────────
+router.get('/users/:id/permissions', requireAuth, requireAdmin, requireFullAdmin, (req, res) => {
   db.get(`SELECT id, email, isAdmin, permissions FROM users WHERE id = ?`, [parseInt(req.params.id)], (err, row) => {
     if (!row) return res.status(404).json({ error: 'Kullanıcı bulunamadı' });
     let perms = null;
@@ -171,8 +184,8 @@ router.get('/users/:id/permissions', requireAuth, requireAdmin, requirePerm('use
   });
 });
 
-// ── Kullanıcı yetkilerini güncelle ────────────────────────────────────────────
-router.post('/users/:id/permissions', requireAuth, requireAdmin, requirePerm('users'), (req, res) => {
+// ── Kullanıcı yetkilerini güncelle — tam admin gerekli ───────────────────────
+router.post('/users/:id/permissions', requireAuth, requireAdmin, requireFullAdmin, (req, res) => {
   const { permissions } = req.body; // null = super admin, dizi = kısıtlı
   const userId = parseInt(req.params.id);
 
@@ -189,8 +202,8 @@ router.post('/users/:id/permissions', requireAuth, requireAdmin, requirePerm('us
   });
 });
 
-// ── Admin flag toggle ─────────────────────────────────────────────────────────
-router.post('/users/:id/toggle-admin', requireAuth, requireAdmin, requirePerm('users'), (req, res) => {
+// ── Admin flag toggle — tam admin gerekli ────────────────────────────────────
+router.post('/users/:id/toggle-admin', requireAuth, requireAdmin, requireFullAdmin, (req, res) => {
   const userId = parseInt(req.params.id);
   if (userId === req.userId) return res.status(400).json({ error: 'Kendi admin durumunuzu değiştiremezsiniz' });
   db.run(`UPDATE users SET isAdmin = CASE WHEN isAdmin = 1 THEN 0 ELSE 1 END WHERE id = ?`, [userId], function(err) {
@@ -284,8 +297,8 @@ router.get('/credits/confirm/:token', (req, res) => {
   );
 });
 
-// ── Genel istatistikler ───────────────────────────────────────────────────────
-router.get('/stats', requireAuth, requireAdmin, requirePerm('stats'), (req, res) => {
+// ── Genel istatistikler — herhangi bir admin görebilir ───────────────────────
+router.get('/stats', requireAuth, requireAdmin, (req, res) => {
   db.get(
     `SELECT
        (SELECT COUNT(*) FROM users) as totalUsers,
