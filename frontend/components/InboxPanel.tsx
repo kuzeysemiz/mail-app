@@ -75,15 +75,19 @@ export default function InboxPanel({ onUnreadChange, autoOpenUnread }: Props) {
   }, [fetchMessages]);
 
   const openMessage = async (msg: Message) => {
-    const r = await inboxAPI.getMessage(msg.id);
-    setSelected(r.data);
-    setShowReply(false);
-    setReplyBody("");
-    setReplyDone(false);
-    if (!msg.isRead) {
-      setMessages(prev => prev.map(m => m.id === msg.id ? { ...m, isRead: 1 } : m));
-      const cnt = await inboxAPI.getUnreadCount();
-      onUnreadChange?.(cnt.data.count ?? 0);
+    try {
+      const r = await inboxAPI.getMessage(msg.id);
+      setSelected(r.data);
+      setShowReply(false);
+      setReplyBody("");
+      setReplyDone(false);
+      if (!msg.isRead) {
+        setMessages(prev => prev.map(m => m.id === msg.id ? { ...m, isRead: 1 } : m));
+        const cnt = await inboxAPI.getUnreadCount();
+        onUnreadChange?.(cnt.data.count ?? 0);
+      }
+    } catch (err) {
+      console.error("Mesaj açılamadı:", err);
     }
   };
 

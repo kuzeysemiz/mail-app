@@ -5,9 +5,10 @@ const MailService = require('../services/mailService');
 const { scanAll } = require('../services/inboxScanService');
 const logger = require('../middleware/logger');
 
-function mbFilter(req) {
-  if (req.userId) return { clause: 'AND userId = ?', params: [req.userId] };
-  return { clause: 'AND userId IS NULL', params: [] };
+function mbFilter(req, alias = '') {
+  const col = alias ? `${alias}.userId` : 'userId';
+  if (req.userId) return { clause: `AND ${col} = ?`, params: [req.userId] };
+  return { clause: `AND ${col} IS NULL`, params: [] };
 }
 
 // Okunmamış mesaj sayısı (bildirim için)
@@ -45,7 +46,7 @@ router.get('/', (req, res) => {
 
 // Mesaj detayı (okundu olarak işaretle)
 router.get('/:id', (req, res) => {
-  const f = mbFilter(req);
+  const f = mbFilter(req, 'm');
   db.get(
     `SELECT m.*, mb.email as mailboxEmail FROM inbox_messages m
      JOIN mailboxes mb ON mb.id = m.mailboxId
@@ -95,7 +96,7 @@ router.post('/:id/reply', async (req, res) => {
   const { body } = req.body;
   if (!body) return res.status(400).json({ error: 'Yanıt içeriği zorunlu' });
 
-  const f = mbFilter(req);
+  const f = mbFilter(req, 'm');
   const msg = await new Promise(r =>
     db.get(
       `SELECT m.*, mb.email as mbEmail, mb.appPassword FROM inbox_messages m
