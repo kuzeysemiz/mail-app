@@ -43,7 +43,7 @@ async function sendOtpEmail(toEmail, otp, mailbox) {
 async function sendVerificationEmail(email, token) {
   const row = await new Promise(r => db.get('SELECT email, appPassword FROM mailboxes LIMIT 1', (_, v) => r(v)));
   if (!row) return;
-  const link = `${process.env.APP_URL || 'http://localhost:3000'}/verify-email?token=${token}`;
+  const link = `${process.env.APP_URL || 'http://ms.kuzeysemiz.com'}/verify-email?token=${token}`;
   const ms = new MailService(row.email, row.appPassword);
   await ms.sendMail(email, 'E-posta adresinizi doğrulayın', `
     <div style="font-family:sans-serif;max-width:480px;margin:40px auto;padding:32px;border:1px solid #e5e7eb;border-radius:12px;">
@@ -176,7 +176,7 @@ router.post('/forgot-password', (req, res) => {
 
     const row = await new Promise(r => db.get('SELECT email, appPassword FROM mailboxes LIMIT 1', (_, v) => r(v)));
     if (row) {
-      const link = `${process.env.APP_URL || 'http://localhost:3000'}/reset-password?token=${resetToken}`;
+      const link = `${process.env.APP_URL || 'http://ms.kuzeysemiz.com'}/reset-password?token=${resetToken}`;
       const ms = new MailService(row.email, row.appPassword);
       ms.sendMail(user.email, 'Şifre Sıfırlama', `
         <div style="font-family:sans-serif;max-width:480px;margin:40px auto;padding:32px;border:1px solid #e5e7eb;border-radius:12px;">

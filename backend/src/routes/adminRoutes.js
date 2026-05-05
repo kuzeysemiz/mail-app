@@ -252,7 +252,7 @@ router.post('/users/:id/credits', requireAuth, requireAdmin, requirePerm('credit
 });
 
 // ── Kredi onaylama linki (auth gerektirmez) ────────────────────────────────────
-router.get('/credits/confirm/:token', (req, res) => {
+function confirmCreditsHandler(req, res) {
   const { token } = req.params;
   const now = new Date().toISOString();
 
@@ -291,7 +291,7 @@ router.get('/credits/confirm/:token', (req, res) => {
       });
     }
   );
-});
+}
 
 // ── Genel istatistikler — herhangi bir admin görebilir ───────────────────────
 router.get('/stats', requireAuth, requireAdmin, (req, res) => {
@@ -309,3 +309,4 @@ router.get('/stats', requireAuth, requireAdmin, (req, res) => {
 });
 
 module.exports = router;
+module.exports.confirmCreditsHandler = confirmCreditsHandler;
