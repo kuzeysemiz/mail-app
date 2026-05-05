@@ -17,6 +17,7 @@ type Stats = { totalUsers: number; verifiedUsers: number; totalCredits: number; 
 type Package = { id: number; name: string; slug: string; emailCount: number | null; price: number | null; paddlePriceId: string | null };
 
 const ALL_PERMISSIONS = ["credits", "users", "settings", "stats"] as const;
+const DISABLED_PERMISSIONS = new Set(["settings", "stats"]);
 const PERM_LABELS: Record<string, string> = {
   credits: "Kredi Yönetimi",
   users: "Kullanıcı Yönetimi",
@@ -596,20 +597,28 @@ export default function AdminPanel({ currentUserId, currentUserPermissions }: {
                 {permIsAdmin && (
                   <div className="space-y-1.5">
                     <p className="text-xs font-medium text-muted-foreground pb-0.5">Yetkiler</p>
-                    {ALL_PERMISSIONS.map(perm => (
-                      <button
-                        key={perm}
-                        onClick={() => handleTogglePerm(perm)}
-                        className={`w-full flex items-center justify-between px-3 py-2 rounded-lg border text-xs transition-colors ${
-                          (permSelected ?? []).includes(perm)
-                            ? "bg-primary/10 border-primary/20 text-primary"
-                            : "border-border text-muted-foreground hover:bg-secondary"
-                        }`}
-                      >
-                        <span>{PERM_LABELS[perm]}</span>
-                        {(permSelected ?? []).includes(perm) && <Check size={12} />}
-                      </button>
-                    ))}
+                    {ALL_PERMISSIONS.map(perm => {
+                      const isDisabled = DISABLED_PERMISSIONS.has(perm);
+                      const isSelected = (permSelected ?? []).includes(perm);
+                      return (
+                        <button
+                          key={perm}
+                          onClick={() => !isDisabled && handleTogglePerm(perm)}
+                          disabled={isDisabled}
+                          title={isDisabled ? "Yakında aktif olacak" : undefined}
+                          className={`w-full flex items-center justify-between px-3 py-2 rounded-lg border text-xs transition-colors ${
+                            isDisabled
+                              ? "border-border text-muted-foreground/30 cursor-not-allowed opacity-40"
+                              : isSelected
+                              ? "bg-primary/10 border-primary/20 text-primary"
+                              : "border-border text-muted-foreground hover:bg-secondary"
+                          }`}
+                        >
+                          <span>{PERM_LABELS[perm]}</span>
+                          {isSelected && !isDisabled && <Check size={12} />}
+                        </button>
+                      );
+                    })}
                   </div>
                 )}
 
