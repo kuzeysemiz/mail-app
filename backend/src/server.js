@@ -55,6 +55,7 @@ app.use('/api/settings',  requireAuth, settingsRoutes);
 app.use('/api/ai',        requireAuth, aiRoutes);
 app.use('/api/leads',     requireAuth, leadsRoutes);
 app.use('/api/lists',     requireAuth, blacklistRoutes);
+app.use('/api/admin/credits/confirm', adminRoutes); // auth gerektirmez — mail linki
 app.use('/api/admin',     requireAuth, adminRoutes);
 app.use('/api/deploy',    requireAuth, deployRoutes);
 app.use('/api/paddle',    requireAuth, paddle.router);
