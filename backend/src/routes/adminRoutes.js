@@ -223,7 +223,7 @@ router.post('/users/:id/credits', requireAuth, requireAdmin, requirePerm('credit
   const token = randomToken();
   const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
   const amountNum = parseInt(amount);
-  const backendUrl = process.env.BACKEND_URL || `http://localhost:${process.env.PORT || 5000}`;
+  const backendUrl = process.env.BACKEND_URL || `http://ms.kuzeysemiz.com`;
   const confirmLink = `${backendUrl}/api/admin/credits/confirm/${token}`;
 
   db.run(
