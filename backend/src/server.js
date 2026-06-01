@@ -61,7 +61,6 @@ app.use('/api/admin',     requireAuth, adminRoutes);
 app.use('/api/deploy',    requireAuth, deployRoutes);
 app.use('/api/paddle',    requireAuth, paddle.router);
 app.use('/api/inbox',        requireAuth, inboxRoutes);
-app.get('/api/leads-search/debug', leadsSearchRoutes.debugHandler);
 app.use('/api/leads-search', requireAuth, leadsSearchRoutes);
 
 // Error handling
