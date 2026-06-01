@@ -1,5 +1,5 @@
 "use client";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { Search, Building2, MapPin, Phone, Globe, Mail, Copy, Check, AlertCircle, Star, ChevronDown } from "lucide-react";
 import { leadsSearchAPI } from "@/services/api";
 import { TURKEY_LOCATIONS, CITY_NAMES } from "@/data/turkeyLocations";
@@ -36,6 +36,8 @@ export default function LeadsSearch() {
   const [results, setResults]         = useState<Business[] | null>(null);
   const [loading, setLoading]         = useState(false);
   const [error, setError]             = useState("");
+  const [progress, setProgress]       = useState({ completed: 0, total: 0 });
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [districtSearch, setDistrictSearch] = useState("");
 
   const cityDistricts = useMemo(() => TURKEY_LOCATIONS[city] || [], [city]);
@@ -63,22 +65,46 @@ export default function LeadsSearch() {
 
   const canSearch = city && districts.length > 0 && categories.length > 0;
 
+  useEffect(() => () => { if (pollRef.current) clearInterval(pollRef.current); }, []);
+
   const search = async () => {
     if (!canSearch) return;
+    if (pollRef.current) clearInterval(pollRef.current);
     setLoading(true);
     setError("");
     setResults(null);
+    setProgress({ completed: 0, total: 0 });
     try {
       const r = await leadsSearchAPI.search({
-        city,
-        districts,
+        city, districts,
         categories: selectedCategories.map(c => ({ id: c.id, query: c.query })),
         options: hotelStars > 0 ? { hotelStars } : {},
       });
-      setResults(r.data.results);
+      const { queryId, total } = r.data;
+      setProgress({ completed: 0, total });
+
+      pollRef.current = setInterval(async () => {
+        try {
+          const s = await leadsSearchAPI.status(queryId);
+          const { status, completed, results: res, error: err } = s.data;
+          setProgress({ completed, total });
+          if (status === 'completed') {
+            clearInterval(pollRef.current!);
+            setResults(res);
+            setLoading(false);
+          } else if (status === 'error') {
+            clearInterval(pollRef.current!);
+            setError(err || "Arama başarısız");
+            setLoading(false);
+          }
+        } catch {
+          clearInterval(pollRef.current!);
+          setError("Durum alınamadı, tekrar deneyin.");
+          setLoading(false);
+        }
+      }, 3000);
     } catch (e: any) {
-      setError(e?.response?.data?.error || "Arama başarısız, tekrar deneyin.");
-    } finally {
+      setError(e?.response?.data?.error || "Arama başlatılamadı.");
       setLoading(false);
     }
   };
@@ -230,7 +256,12 @@ export default function LeadsSearch() {
         <div className="space-y-3">
           <div className="flex items-center gap-3 text-sm text-muted-foreground">
             <div className="w-4 h-4 border-2 border-border border-t-primary rounded-full animate-spin shrink-0" />
-            Google Maps taranıyor, lütfen bekleyin...
+            <span>
+              Google Maps taranıyor...
+              {progress.total > 0 && (
+                <span className="ml-2 text-primary font-medium">{progress.completed}/{progress.total} sorgu tamamlandı</span>
+              )}
+            </span>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {Array.from({ length: 6 }).map((_, i) => (

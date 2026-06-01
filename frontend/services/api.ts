@@ -202,6 +202,7 @@ export const leadsSearchAPI = {
     categories: { id: string; query: string }[];
     options?: Record<string, unknown>;
   }) => api.post("/leads-search/search", data),
+  status: (queryId: string) => api.get(`/leads-search/status/${queryId}`),
 };
 
 export default api;

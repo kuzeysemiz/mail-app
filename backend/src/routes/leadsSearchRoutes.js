@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const axios = require('axios');
 const cheerio = require('cheerio');
+const crypto = require('crypto');
 
 const SCRAPER_URL = process.env.MAPS_SCRAPER_URL || 'http://maps-scraper:8080';
 const EMAIL_REGEX = /[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/g;
@@ -12,9 +13,10 @@ const HTTP_HEADERS = {
   'Accept-Language': 'tr-TR,tr;q=0.9,en;q=0.8',
 };
 
-function sleep(ms) {
-  return new Promise(r => setTimeout(r, ms));
-}
+// In-memory job store (sunucu yeniden başlayınca temizlenir)
+const searchJobs = new Map();
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
 function extractEmails(html) {
   return (html.match(EMAIL_REGEX) || [])
@@ -24,10 +26,7 @@ function extractEmails(html) {
 
 async function fetchHtml(url) {
   const resp = await axios.get(url, {
-    timeout: SCRAPE_TIMEOUT,
-    headers: HTTP_HEADERS,
-    maxRedirects: 4,
-    maxContentLength: 500_000,
+    timeout: SCRAPE_TIMEOUT, headers: HTTP_HEADERS, maxRedirects: 4, maxContentLength: 500_000,
   });
   return typeof resp.data === 'string' ? resp.data : '';
 }
@@ -48,7 +47,6 @@ async function scrapeEmails(websiteUrl) {
   const emails = new Set();
   let baseUrl;
   try { baseUrl = new URL(websiteUrl).origin; } catch { return []; }
-
   const tryFetch = async (url) => {
     try {
       const html = await fetchHtml(url);
@@ -56,19 +54,15 @@ async function scrapeEmails(websiteUrl) {
       return html;
     } catch { return null; }
   };
-
   const mainHtml = await tryFetch(websiteUrl);
   if (mainHtml) {
     const contactLink = await findContactLink(mainHtml, baseUrl);
     if (contactLink && contactLink !== websiteUrl) await tryFetch(contactLink);
   }
-  await Promise.allSettled(
-    ['/contact', '/iletisim', '/bize-ulasin', '/contact-us'].map(p => tryFetch(baseUrl + p))
-  );
+  await Promise.allSettled(['/contact', '/iletisim', '/bize-ulasin', '/contact-us'].map(p => tryFetch(baseUrl + p)));
   return [...emails];
 }
 
-// Scraper hazır olana kadar bekle (Chrome başlaması için zaman gerekebilir)
 async function waitForScraper(maxAttempts = 5) {
   for (let i = 0; i < maxAttempts; i++) {
     try {
@@ -83,11 +77,7 @@ async function waitForScraper(maxAttempts = 5) {
 
 async function submitJob(keyword) {
   const resp = await axios.post(`${SCRAPER_URL}/api/v1/scrape`, {
-    keyword,
-    lang: 'tr',
-    max_depth: 3,
-    email: false,
-    fast_mode: true,
+    keyword, lang: 'tr', max_depth: 3, email: false, fast_mode: true,
   }, { timeout: 10000 });
   return resp.data.job_id;
 }
@@ -101,7 +91,7 @@ async function pollJob(jobId, timeoutMs = 120_000) {
       const { status, results } = resp.data;
       if (status === 'completed') return results || [];
       if (status === 'failed' || status === 'cancelled') return [];
-    } catch { /* geçici hata, tekrar dene */ }
+    } catch { /* geçici hata */ }
   }
   return [];
 }
@@ -114,18 +104,74 @@ function buildQuery(categoryQuery, district, city, options) {
   return q.trim();
 }
 
-// POST /api/leads-search/search
+// Arka planda tüm aramaları yürüt
+async function runSearchJobs(queryId, queries, options) {
+  const job = searchJobs.get(queryId);
+  if (!job) return;
+
+  try {
+    const ready = await waitForScraper();
+    if (!ready) {
+      job.status = 'error';
+      job.error = 'Harita tarayıcı servisi hazır değil, 10-20 saniye sonra tekrar deneyin';
+      return;
+    }
+
+    // Tüm gosom job'larını paralel başlat
+    const jobIds = (await Promise.allSettled(queries.map(q => submitJob(q))))
+      .filter(r => r.status === 'fulfilled')
+      .map(r => r.value);
+
+    if (jobIds.length === 0) {
+      job.status = 'error';
+      job.error = 'Arama başlatılamadı';
+      return;
+    }
+
+    job.total = jobIds.length;
+
+    // Her job'u paralel poll et, tamamlandıkça ekle
+    await Promise.allSettled(jobIds.map(async (id) => {
+      const results = await pollJob(id);
+      job.rawResults.push(...results);
+      job.completed++;
+    }));
+
+    // Deduplicate
+    const seen = new Set();
+    const unique = job.rawResults.filter(b => {
+      const key = b.place_id || `${b.title}|${b.address}`;
+      if (seen.has(key)) return false;
+      seen.add(key); return true;
+    });
+
+    // Email tarama
+    const withEmails = await Promise.allSettled(
+      unique.map(async (b) => {
+        const emails = b.website ? await scrapeEmails(b.website).catch(() => []) : [];
+        return {
+          name: b.title || '', address: b.address || '', phone: b.phone || '',
+          website: b.website || '', rating: b.review_rating || null,
+          reviewCount: b.review_count || 0, emails,
+        };
+      })
+    );
+
+    job.results = withEmails.filter(r => r.status === 'fulfilled').map(r => r.value);
+    job.status = 'completed';
+  } catch {
+    job.status = 'error';
+    job.error = 'Beklenmeyen bir hata oluştu';
+  }
+}
+
+// POST /api/leads-search/search — hemen queryId döner, arka planda çalışır
 router.post('/search', async (req, res) => {
   const { city, districts, categories, options = {} } = req.body;
-
   if (!city) return res.status(400).json({ error: 'Şehir seçin' });
   if (!districts?.length) return res.status(400).json({ error: 'En az bir ilçe seçin' });
   if (!categories?.length) return res.status(400).json({ error: 'En az bir kategori seçin' });
 
-  const ready = await waitForScraper();
-  if (!ready) return res.status(503).json({ error: 'Harita tarayıcı servisi henüz hazır değil, 10-20 saniye sonra tekrar deneyin' });
-
-  // Her (ilçe × kategori) kombinasyonu için query oluştur
   const queries = [];
   for (const district of districts) {
     for (const cat of categories) {
@@ -133,49 +179,28 @@ router.post('/search', async (req, res) => {
     }
   }
 
-  // Tüm job'ları paralel başlat
-  const jobIds = await Promise.allSettled(queries.map(q => submitJob(q)));
-  const validJobs = jobIds
-    .filter(r => r.status === 'fulfilled')
-    .map(r => r.value);
-
-  if (validJobs.length === 0) return res.status(502).json({ error: 'Arama başlatılamadı' });
-
-  // Tüm job'ları paralel poll et
-  const allResults = await Promise.allSettled(validJobs.map(id => pollJob(id)));
-  const merged = allResults
-    .filter(r => r.status === 'fulfilled')
-    .flatMap(r => r.value);
-
-  // place_id veya (title+address) ile deduplicate et
-  const seen = new Set();
-  const unique = merged.filter(b => {
-    const key = b.place_id || `${b.title}|${b.address}`;
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return true;
+  const queryId = crypto.randomBytes(16).toString('hex');
+  searchJobs.set(queryId, {
+    status: 'running', results: [], rawResults: [],
+    total: queries.length, completed: 0, error: null,
   });
 
-  if (unique.length === 0) return res.json({ results: [] });
+  // Arka planda başlat, hemen yanıt ver
+  runSearchJobs(queryId, queries, options);
 
-  // Email tarama (paralel)
-  const withEmails = await Promise.allSettled(
-    unique.map(async (b) => {
-      const emails = b.website ? await scrapeEmails(b.website).catch(() => []) : [];
-      return {
-        name: b.title || '',
-        address: b.address || '',
-        phone: b.phone || '',
-        website: b.website || '',
-        rating: b.review_rating || null,
-        reviewCount: b.review_count || 0,
-        emails,
-      };
-    })
-  );
+  res.json({ queryId, total: queries.length });
+});
 
+// GET /api/leads-search/status/:queryId — frontend bu endpoint'i poll eder
+router.get('/status/:queryId', (req, res) => {
+  const job = searchJobs.get(req.params.queryId);
+  if (!job) return res.status(404).json({ error: 'Sorgu bulunamadı veya süresi dolmuş' });
   res.json({
-    results: withEmails.filter(r => r.status === 'fulfilled').map(r => r.value),
+    status: job.status,
+    completed: job.completed,
+    total: job.total,
+    results: job.status === 'completed' ? job.results : [],
+    error: job.error,
   });
 });
 
