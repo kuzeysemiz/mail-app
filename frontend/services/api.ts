@@ -16,11 +16,14 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// 401 gelirse token temizle — sayfa reload ile login ekranı açılır
+// 401 gelirse token temizle — auth endpoint'leri hariç (login/register zaten 401 dönebilir)
+const AUTH_PATHS = ["/users/login", "/users/verify-otp", "/users/register", "/users/forgot-password", "/users/reset-password", "/auth/login", "/auth/verify-otp"];
 api.interceptors.response.use(
   (res) => res,
   (err) => {
-    if (err.response?.status === 401 && typeof window !== "undefined") {
+    const url = err.config?.url || "";
+    const isAuthEndpoint = AUTH_PATHS.some(p => url.includes(p));
+    if (err.response?.status === 401 && !isAuthEndpoint && typeof window !== "undefined") {
       localStorage.removeItem("authToken");
       localStorage.removeItem("authExpiry");
       window.location.reload();
