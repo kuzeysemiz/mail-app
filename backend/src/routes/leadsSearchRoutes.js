@@ -118,13 +118,16 @@ async function runSearchJobs(queryId, queries, options) {
     }
 
     // Tüm gosom job'larını paralel başlat
-    const jobIds = (await Promise.allSettled(queries.map(q => submitJob(q))))
-      .filter(r => r.status === 'fulfilled')
-      .map(r => r.value);
+    const submitResults = await Promise.allSettled(queries.map(q => submitJob(q)));
+    const firstError = submitResults.find(r => r.status === 'rejected');
+    const jobIds = submitResults.filter(r => r.status === 'fulfilled').map(r => r.value);
 
     if (jobIds.length === 0) {
+      const errMsg = firstError?.reason?.response?.data
+        ? JSON.stringify(firstError.reason.response.data)
+        : (firstError?.reason?.message || 'bilinmeyen hata');
       job.status = 'error';
-      job.error = 'Arama başlatılamadı';
+      job.error = `Arama başlatılamadı: ${errMsg}`;
       return;
     }
 
