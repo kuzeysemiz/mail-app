@@ -5,6 +5,19 @@ const cheerio = require('cheerio');
 const crypto = require('crypto');
 
 const SCRAPER_URL = process.env.MAPS_SCRAPER_URL || 'http://maps-scraper:8080';
+
+const CITY_COORDS = {
+  'İstanbul': '41.0082,28.9784', 'Ankara': '39.9334,32.8597', 'İzmir': '38.4192,27.1287',
+  'Bursa': '40.1826,29.0665', 'Antalya': '36.8969,30.7133', 'Adana': '37.0000,35.3213',
+  'Konya': '37.8746,32.4932', 'Gaziantep': '37.0662,37.3833', 'Mersin': '36.8121,34.6415',
+  'Kayseri': '38.7205,35.4826', 'Eskişehir': '39.7767,30.5206', 'Trabzon': '41.0027,39.7168',
+  'Sakarya': '40.7731,30.3948', 'Kocaeli': '40.7654,29.9408', 'Diyarbakır': '37.9144,40.2306',
+  'Samsun': '41.2928,36.3313', 'Denizli': '37.7765,29.0864', 'Şanlıurfa': '37.1591,38.7969',
+  'Malatya': '38.3552,38.3095', 'Kahramanmaraş': '37.5858,36.9371', 'Erzurum': '39.9086,41.2769',
+  'Van': '38.4891,43.4089', 'Batman': '37.8812,41.1351', 'Elazığ': '38.6810,39.2264',
+  'Manisa': '38.6191,27.4289', 'Balıkesir': '39.6484,27.8826', 'Muğla': '37.2153,28.3636',
+  'Tekirdağ': '40.9781,27.5115', 'Mardin': '37.3212,40.7245', 'Hatay': '36.4018,36.3498',
+};
 const EMAIL_REGEX = /[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/g;
 const INVALID_EXTS = /\.(png|jpg|jpeg|gif|svg|webp|pdf|zip|js|css|woff|ttf)$/i;
 const SCRAPE_TIMEOUT = 8000;
@@ -75,7 +88,8 @@ async function waitForScraper(maxAttempts = 5) {
   return false;
 }
 
-async function submitJob(keyword) {
+async function submitJob(keyword, city) {
+  const geo = CITY_COORDS[city] || '39.9334,32.8597'; // default: Ankara
   const resp = await axios.post(`${SCRAPER_URL}/api/v1/jobs`, {
     name: keyword.substring(0, 60),
     keywords: [keyword],
@@ -84,6 +98,8 @@ async function submitJob(keyword) {
     fast_mode: true,
     email: false,
     max_time: 300000000000,
+    geo_coordinates: geo,
+    zoom: 13,
   }, { timeout: 10000 });
   return resp.data.id || resp.data.ID || resp.data.job_id;
 }
@@ -128,7 +144,7 @@ async function runSearchJobs(queryId, queries, options) {
     }
 
     // Tüm gosom job'larını paralel başlat
-    const submitResults = await Promise.allSettled(queries.map(q => submitJob(q)));
+    const submitResults = await Promise.allSettled(queries.map(q => submitJob(q, job.city)));
     const firstError = submitResults.find(r => r.status === 'rejected');
     const jobIds = submitResults.filter(r => r.status === 'fulfilled').map(r => r.value);
 
@@ -190,7 +206,8 @@ async function debugHandler(req, res) {
   try {
     const r = await axios.post(`${SCRAPER_URL}/api/v1/jobs`, {
       name: 'debug-job', keywords: ['restoran Kadıköy İstanbul'],
-      lang: 'en', depth: 1, fastmode: true, email: false, max_time: 120000000000,
+      lang: 'en', depth: 1, fast_mode: true, email: false, max_time: 300000000000,
+      geo_coordinates: '41.0082,28.9784', zoom: 13,
     }, { timeout: 6000 });
     results['POST /api/v1/jobs'] = { status: r.status, data: r.data };
 
@@ -224,7 +241,7 @@ router.post('/search', async (req, res) => {
   const queryId = crypto.randomBytes(16).toString('hex');
   searchJobs.set(queryId, {
     status: 'running', results: [], rawResults: [],
-    total: queries.length, completed: 0, error: null,
+    total: queries.length, completed: 0, error: null, city,
   });
 
   // Arka planda başlat, hemen yanıt ver
