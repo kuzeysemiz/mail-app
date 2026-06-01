@@ -4,20 +4,7 @@ const axios = require('axios');
 const cheerio = require('cheerio');
 const crypto = require('crypto');
 
-const SCRAPER_URL = process.env.MAPS_SCRAPER_URL || 'http://maps-scraper:8080';
-
-const CITY_COORDS = {
-  'İstanbul': '41.0082,28.9784', 'Ankara': '39.9334,32.8597', 'İzmir': '38.4192,27.1287',
-  'Bursa': '40.1826,29.0665', 'Antalya': '36.8969,30.7133', 'Adana': '37.0000,35.3213',
-  'Konya': '37.8746,32.4932', 'Gaziantep': '37.0662,37.3833', 'Mersin': '36.8121,34.6415',
-  'Kayseri': '38.7205,35.4826', 'Eskişehir': '39.7767,30.5206', 'Trabzon': '41.0027,39.7168',
-  'Sakarya': '40.7731,30.3948', 'Kocaeli': '40.7654,29.9408', 'Diyarbakır': '37.9144,40.2306',
-  'Samsun': '41.2928,36.3313', 'Denizli': '37.7765,29.0864', 'Şanlıurfa': '37.1591,38.7969',
-  'Malatya': '38.3552,38.3095', 'Kahramanmaraş': '37.5858,36.9371', 'Erzurum': '39.9086,41.2769',
-  'Van': '38.4891,43.4089', 'Batman': '37.8812,41.1351', 'Elazığ': '38.6810,39.2264',
-  'Manisa': '38.6191,27.4289', 'Balıkesir': '39.6484,27.8826', 'Muğla': '37.2153,28.3636',
-  'Tekirdağ': '40.9781,27.5115', 'Mardin': '37.3212,40.7245', 'Hatay': '36.4018,36.3498',
-};
+const FSQ_BASE = 'https://api.foursquare.com/v3/places/search';
 const EMAIL_REGEX = /[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/g;
 const INVALID_EXTS = /\.(png|jpg|jpeg|gif|svg|webp|pdf|zip|js|css|woff|ttf)$/i;
 const SCRAPE_TIMEOUT = 8000;
@@ -26,7 +13,6 @@ const HTTP_HEADERS = {
   'Accept-Language': 'tr-TR,tr;q=0.9,en;q=0.8',
 };
 
-// In-memory job store (sunucu yeniden başlayınca temizlenir)
 const searchJobs = new Map();
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
@@ -76,198 +62,93 @@ async function scrapeEmails(websiteUrl) {
   return [...emails];
 }
 
-async function waitForScraper(maxAttempts = 5) {
-  for (let i = 0; i < maxAttempts; i++) {
-    try {
-      await axios.get(`${SCRAPER_URL}/api/v1/health`, { timeout: 3000 });
-      return true;
-    } catch {
-      if (i < maxAttempts - 1) await sleep(3000);
-    }
-  }
-  return false;
+async function foursquareSearch(query, near) {
+  const apiKey = process.env.FOURSQUARE_API_KEY;
+  if (!apiKey) throw new Error('FOURSQUARE_API_KEY tanımlı değil');
+  const resp = await axios.get(FSQ_BASE, {
+    params: { query, near, limit: 50, fields: 'fsq_id,name,location,tel,website,rating,stats' },
+    headers: { Authorization: apiKey, Accept: 'application/json' },
+    timeout: 10000,
+  });
+  return resp.data.results || [];
 }
 
-async function submitJob(keyword, city) {
-  const geo = CITY_COORDS[city] || '39.9334,32.8597';
-  const [lat, lon] = geo.split(',');
-  const resp = await axios.post(`${SCRAPER_URL}/api/v1/jobs`, {
-    name: keyword.substring(0, 60),
-    keywords: [keyword],
-    lang: 'en',
-    depth: 3,
-    fast_mode: true,
-    email: false,
-    max_time: 300000000000,
-    lat,
-    lon,
-    zoom: 13,
-  }, { timeout: 10000 });
-  return resp.data.id || resp.data.ID || resp.data.job_id;
-}
-
-async function pollJob(jobId, timeoutMs = 150_000) {
-  const deadline = Date.now() + timeoutMs;
-  while (Date.now() < deadline) {
-    await sleep(4000);
-    try {
-      const resp = await axios.get(`${SCRAPER_URL}/api/v1/jobs/${jobId}`, { timeout: 10000 });
-      const data = resp.data;
-      // gosom Status alanı büyük harfle başlıyor
-      const status = (data.Status || data.status || '').toLowerCase();
-      if (['completed', 'done', 'finished'].includes(status)) {
-        return data.Results || data.results || data.Data?.results || [];
-      }
-      if (['failed', 'error', 'cancelled'].includes(status)) return [];
-    } catch { /* geçici hata */ }
-  }
-  return [];
-}
-
-function buildQuery(categoryQuery, district, city, options) {
-  let q = `${categoryQuery} ${district} ${city}`;
-  if (options?.hotelStars && categoryQuery.includes('otel')) {
-    q = `${options.hotelStars} yıldızlı otel ${district} ${city}`;
-  }
-  return q.trim();
-}
-
-// Arka planda tüm aramaları yürüt
-async function runSearchJobs(queryId, queries, options) {
+async function runSearchJobs(queryId, searchParams) {
   const job = searchJobs.get(queryId);
   if (!job) return;
-
   try {
-    const ready = await waitForScraper();
-    if (!ready) {
-      job.status = 'error';
-      job.error = 'Harita tarayıcı servisi hazır değil, 10-20 saniye sonra tekrar deneyin';
-      return;
-    }
+    const { city, districts, categories } = searchParams;
 
-    // Tüm gosom job'larını paralel başlat
-    const submitResults = await Promise.allSettled(queries.map(q => submitJob(q, job.city)));
-    const firstError = submitResults.find(r => r.status === 'rejected');
-    const jobIds = submitResults.filter(r => r.status === 'fulfilled').map(r => r.value);
+    // Tüm (ilçe × kategori) aramalarını paralel yap
+    const allResults = await Promise.allSettled(
+      districts.flatMap(district =>
+        categories.map(cat =>
+          foursquareSearch(cat.query, `${district}, ${city}`)
+        )
+      )
+    );
 
-    if (jobIds.length === 0) {
-      const errMsg = firstError?.reason?.response?.data
-        ? JSON.stringify(firstError.reason.response.data)
-        : (firstError?.reason?.message || 'bilinmeyen hata');
-      job.status = 'error';
-      job.error = `Arama başlatılamadı: ${errMsg}`;
-      return;
-    }
-
-    job.total = jobIds.length;
-
-    // Her job'u paralel poll et, tamamlandıkça ekle
-    await Promise.allSettled(jobIds.map(async (id) => {
-      const results = await pollJob(id);
-      job.rawResults.push(...results);
-      job.completed++;
-    }));
+    const merged = allResults
+      .filter(r => r.status === 'fulfilled')
+      .flatMap(r => r.value);
 
     // Deduplicate
     const seen = new Set();
-    const unique = job.rawResults.filter(b => {
-      const key = b.place_id || `${b.title}|${b.address}`;
+    const unique = merged.filter(b => {
+      const key = b.fsq_id || `${b.name}|${b.location?.formatted_address}`;
       if (seen.has(key)) return false;
       seen.add(key); return true;
     });
 
-    // Email tarama
+    job.total = unique.length;
+
+    // Email tarama paralel
     const withEmails = await Promise.allSettled(
       unique.map(async (b) => {
         const emails = b.website ? await scrapeEmails(b.website).catch(() => []) : [];
+        job.completed++;
         return {
-          name: b.title || '', address: b.address || '', phone: b.phone || '',
-          website: b.website || '', rating: b.review_rating || null,
-          reviewCount: b.review_count || 0, emails,
+          name: b.name || '',
+          address: b.location?.formatted_address || b.location?.address || '',
+          phone: b.tel || '',
+          website: b.website || '',
+          rating: b.rating ? Math.round((b.rating / 2) * 10) / 10 : null,
+          reviewCount: b.stats?.total_ratings || 0,
+          emails,
         };
       })
     );
 
     job.results = withEmails.filter(r => r.status === 'fulfilled').map(r => r.value);
     job.status = 'completed';
-  } catch {
-    job.status = 'error';
-    job.error = 'Beklenmeyen bir hata oluştu';
-  }
-}
-
-// GET /api/leads-search/debug — gosom API probe (auth gerekmez, geçici)
-async function debugHandler(req, res) {
-  const results = {};
-  try {
-    const h = await axios.get(`${SCRAPER_URL}/api/v1/health`, { timeout: 4000 });
-    results.health = h.data;
-  } catch (e) { results.health = e.message; }
-
-  // Job oluştur ve status'unu kontrol et
-  try {
-    const r = await axios.post(`${SCRAPER_URL}/api/v1/jobs`, {
-      name: 'debug-job', keywords: ['restoran Kadıköy İstanbul'],
-      lang: 'en', depth: 1, fast_mode: true, email: false, max_time: 300000000000,
-      lat: '41.0082', lon: '28.9784', zoom: 13,
-    }, { timeout: 6000 });
-    results['POST /api/v1/jobs'] = { status: r.status, data: r.data };
-
-    const jobId = r.data?.id || r.data?.job_id || r.data?.ID;
-    if (jobId) {
-      // 60 saniye bekle
-      await new Promise(res => setTimeout(res, 60000));
-      const s = await axios.get(`${SCRAPER_URL}/api/v1/jobs/${jobId}`, { timeout: 6000 }).catch(e => ({ status: e.response?.status, data: e.response?.data }));
-      results[`GET /api/v1/jobs/${jobId}`] = { status: s.status, data: s.data };
-
-      // Ayrı results endpoint dene
-      const r2 = await axios.get(`${SCRAPER_URL}/api/v1/jobs/${jobId}/results`, { timeout: 6000 }).catch(e => ({ status: e.response?.status, data: e.response?.data }));
-      results[`GET /api/v1/jobs/${jobId}/results`] = { status: r2.status, data: r2.data };
-    }
   } catch (e) {
-    results['POST /api/v1/jobs'] = { status: e.response?.status, data: e.response?.data, msg: e.message };
+    job.status = 'error';
+    job.error = e.message || 'Beklenmeyen hata';
   }
-  res.json(results);
 }
 
-// POST /api/leads-search/search — hemen queryId döner, arka planda çalışır
+// POST /api/leads-search/search
 router.post('/search', async (req, res) => {
-  const { city, districts, categories, options = {} } = req.body;
+  const { city, districts, categories } = req.body;
   if (!city) return res.status(400).json({ error: 'Şehir seçin' });
   if (!districts?.length) return res.status(400).json({ error: 'En az bir ilçe seçin' });
   if (!categories?.length) return res.status(400).json({ error: 'En az bir kategori seçin' });
-
-  const queries = [];
-  for (const district of districts) {
-    for (const cat of categories) {
-      queries.push(buildQuery(cat.query, district, city, options));
-    }
-  }
+  if (!process.env.FOURSQUARE_API_KEY) return res.status(500).json({ error: 'FOURSQUARE_API_KEY sunucuda tanımlı değil' });
 
   const queryId = crypto.randomBytes(16).toString('hex');
-  searchJobs.set(queryId, {
-    status: 'running', results: [], rawResults: [],
-    total: queries.length, completed: 0, error: null, city,
-  });
+  const total = districts.length * categories.length;
+  searchJobs.set(queryId, { status: 'running', results: [], total, completed: 0, error: null });
 
-  // Arka planda başlat, hemen yanıt ver
-  runSearchJobs(queryId, queries, options);
+  runSearchJobs(queryId, { city, districts, categories });
 
-  res.json({ queryId, total: queries.length });
+  res.json({ queryId, total });
 });
 
-// GET /api/leads-search/status/:queryId — frontend bu endpoint'i poll eder
+// GET /api/leads-search/status/:queryId
 router.get('/status/:queryId', (req, res) => {
   const job = searchJobs.get(req.params.queryId);
-  if (!job) return res.status(404).json({ error: 'Sorgu bulunamadı veya süresi dolmuş' });
-  res.json({
-    status: job.status,
-    completed: job.completed,
-    total: job.total,
-    results: job.status === 'completed' ? job.results : [],
-    error: job.error,
-  });
+  if (!job) return res.status(404).json({ error: 'Sorgu bulunamadı' });
+  res.json({ status: job.status, completed: job.completed, total: job.total, results: job.status === 'completed' ? job.results : [], error: job.error });
 });
 
 module.exports = router;
-module.exports.debugHandler = debugHandler;
