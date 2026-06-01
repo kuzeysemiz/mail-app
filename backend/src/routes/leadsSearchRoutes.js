@@ -38,10 +38,7 @@ async function findContactLink(html, baseUrl) {
   let found = null;
   $('a[href]').each((_, el) => {
     const href = $(el).attr('href') || '';
-    if (pattern.test(href) || pattern.test($(el).text())) {
-      found = href;
-      return false;
-    }
+    if (pattern.test(href) || pattern.test($(el).text())) { found = href; return false; }
   });
   if (!found) return null;
   try { return new URL(found, baseUrl).href; } catch { return null; }
@@ -71,6 +68,19 @@ async function scrapeEmails(websiteUrl) {
   return [...emails];
 }
 
+// Scraper hazır olana kadar bekle (Chrome başlaması için zaman gerekebilir)
+async function waitForScraper(maxAttempts = 8) {
+  for (let i = 0; i < maxAttempts; i++) {
+    try {
+      await axios.get(`${SCRAPER_URL}/api/v1/health`, { timeout: 5000 });
+      return true;
+    } catch {
+      if (i < maxAttempts - 1) await sleep(4000);
+    }
+  }
+  return false;
+}
+
 async function submitJob(keyword) {
   const resp = await axios.post(`${SCRAPER_URL}/api/v1/scrape`, {
     keyword,
@@ -86,45 +96,71 @@ async function pollJob(jobId, timeoutMs = 120_000) {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
     await sleep(3000);
-    const resp = await axios.get(`${SCRAPER_URL}/api/v1/jobs/${jobId}`, { timeout: 10000 });
-    const { status, results } = resp.data;
-    if (status === 'completed') return results || [];
-    if (status === 'failed' || status === 'cancelled') return [];
+    try {
+      const resp = await axios.get(`${SCRAPER_URL}/api/v1/jobs/${jobId}`, { timeout: 10000 });
+      const { status, results } = resp.data;
+      if (status === 'completed') return results || [];
+      if (status === 'failed' || status === 'cancelled') return [];
+    } catch { /* geçici hata, tekrar dene */ }
   }
   return [];
 }
 
+function buildQuery(categoryQuery, district, city, options) {
+  let q = `${categoryQuery} ${district} ${city}`;
+  if (options?.hotelStars && categoryQuery.includes('otel')) {
+    q = `${options.hotelStars} yıldızlı otel ${district} ${city}`;
+  }
+  return q.trim();
+}
+
 // POST /api/leads-search/search
 router.post('/search', async (req, res) => {
-  const { query } = req.body;
-  if (!query || !query.trim()) return res.status(400).json({ error: 'Sorgu zorunlu' });
+  const { city, districts, categories, options = {} } = req.body;
 
-  // Scraper servisinin hazır olduğunu kontrol et
-  try {
-    await axios.get(`${SCRAPER_URL}/api/v1/health`, { timeout: 5000 });
-  } catch {
-    return res.status(503).json({ error: 'Harita tarayıcı servisi hazır değil, birkaç saniye sonra tekrar deneyin' });
+  if (!city) return res.status(400).json({ error: 'Şehir seçin' });
+  if (!districts?.length) return res.status(400).json({ error: 'En az bir ilçe seçin' });
+  if (!categories?.length) return res.status(400).json({ error: 'En az bir kategori seçin' });
+
+  const ready = await waitForScraper();
+  if (!ready) return res.status(503).json({ error: 'Harita tarayıcı servisi henüz hazır değil, 10-20 saniye sonra tekrar deneyin' });
+
+  // Her (ilçe × kategori) kombinasyonu için query oluştur
+  const queries = [];
+  for (const district of districts) {
+    for (const cat of categories) {
+      queries.push(buildQuery(cat.query, district, city, options));
+    }
   }
 
-  let jobId;
-  try {
-    jobId = await submitJob(query.trim());
-  } catch {
-    return res.status(502).json({ error: 'Arama başlatılamadı' });
-  }
+  // Tüm job'ları paralel başlat
+  const jobIds = await Promise.allSettled(queries.map(q => submitJob(q)));
+  const validJobs = jobIds
+    .filter(r => r.status === 'fulfilled')
+    .map(r => r.value);
 
-  let places;
-  try {
-    places = await pollJob(jobId);
-  } catch {
-    return res.status(502).json({ error: 'Sonuçlar alınamadı' });
-  }
+  if (validJobs.length === 0) return res.status(502).json({ error: 'Arama başlatılamadı' });
 
-  if (places.length === 0) return res.json({ results: [] });
+  // Tüm job'ları paralel poll et
+  const allResults = await Promise.allSettled(validJobs.map(id => pollJob(id)));
+  const merged = allResults
+    .filter(r => r.status === 'fulfilled')
+    .flatMap(r => r.value);
+
+  // place_id veya (title+address) ile deduplicate et
+  const seen = new Set();
+  const unique = merged.filter(b => {
+    const key = b.place_id || `${b.title}|${b.address}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+
+  if (unique.length === 0) return res.json({ results: [] });
 
   // Email tarama (paralel)
   const withEmails = await Promise.allSettled(
-    places.map(async (b) => {
+    unique.map(async (b) => {
       const emails = b.website ? await scrapeEmails(b.website).catch(() => []) : [];
       return {
         name: b.title || '',

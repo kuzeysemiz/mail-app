@@ -196,7 +196,12 @@ export const authSessionAPI = {
 };
 
 export const leadsSearchAPI = {
-  search: (query: string) => api.post("/leads-search/search", { query }),
+  search: (data: {
+    city: string;
+    districts: string[];
+    categories: { id: string; query: string }[];
+    options?: Record<string, unknown>;
+  }) => api.post("/leads-search/search", data),
 };
 
 export default api;
