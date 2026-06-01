@@ -215,10 +215,14 @@ async function debugHandler(req, res) {
 
     const jobId = r.data?.id || r.data?.job_id || r.data?.ID;
     if (jobId) {
-      // 30 saniye bekle — job'un tamamlanması için
-      await new Promise(res => setTimeout(res, 30000));
-      const s = await axios.get(`${SCRAPER_URL}/api/v1/jobs/${jobId}`, { timeout: 6000 });
-      results[`GET /api/v1/jobs/${jobId} (after 30s)`] = { status: s.status, data: s.data };
+      // 60 saniye bekle
+      await new Promise(res => setTimeout(res, 60000));
+      const s = await axios.get(`${SCRAPER_URL}/api/v1/jobs/${jobId}`, { timeout: 6000 }).catch(e => ({ status: e.response?.status, data: e.response?.data }));
+      results[`GET /api/v1/jobs/${jobId}`] = { status: s.status, data: s.data };
+
+      // Ayrı results endpoint dene
+      const r2 = await axios.get(`${SCRAPER_URL}/api/v1/jobs/${jobId}/results`, { timeout: 6000 }).catch(e => ({ status: e.response?.status, data: e.response?.data }));
+      results[`GET /api/v1/jobs/${jobId}/results`] = { status: r2.status, data: r2.data };
     }
   } catch (e) {
     results['POST /api/v1/jobs'] = { status: e.response?.status, data: e.response?.data, msg: e.message };
