@@ -76,10 +76,17 @@ async function waitForScraper(maxAttempts = 5) {
 }
 
 async function submitJob(keyword) {
-  const resp = await axios.post(`${SCRAPER_URL}/api/v1/scrape`, {
-    keyword, lang: 'tr', max_depth: 3, email: false, fast_mode: true,
+  const resp = await axios.post(`${SCRAPER_URL}/api/v1/jobs`, {
+    name: keyword.substring(0, 60),
+    keywords: keyword,
+    lang: 'en',
+    depth: 3,
+    fastmode: true,
+    email: false,
+    maxtime: '5m',
   }, { timeout: 10000 });
-  return resp.data.job_id;
+  // API yanıtında id alanı farklı isimde olabilir
+  return resp.data.id || resp.data.job_id || resp.data.ID;
 }
 
 async function pollJob(jobId, timeoutMs = 120_000) {
@@ -88,9 +95,12 @@ async function pollJob(jobId, timeoutMs = 120_000) {
     await sleep(3000);
     try {
       const resp = await axios.get(`${SCRAPER_URL}/api/v1/jobs/${jobId}`, { timeout: 10000 });
-      const { status, results } = resp.data;
-      if (status === 'completed') return results || [];
-      if (status === 'failed' || status === 'cancelled') return [];
+      const data = resp.data;
+      const status = (data.status || '').toLowerCase();
+      if (['completed', 'done', 'finished'].includes(status)) {
+        return data.results || data.data || [];
+      }
+      if (['failed', 'error', 'cancelled'].includes(status)) return [];
     } catch { /* geçici hata */ }
   }
   return [];
@@ -176,18 +186,15 @@ async function debugHandler(req, res) {
     results.health = h.data;
   } catch (e) { results.health = e.message; }
 
-  for (const method of ['post', 'get']) {
-    for (const path of ['/api/v1/scrape', '/api/v1/jobs', '/api/v1/job', '/api/v1/search']) {
-      const key = `${method.toUpperCase()} ${path}`;
-      try {
-        const r = method === 'post'
-          ? await axios.post(`${SCRAPER_URL}${path}`, { keyword: 'test' }, { timeout: 4000 })
-          : await axios.get(`${SCRAPER_URL}${path}`, { timeout: 4000 });
-        results[key] = { status: r.status, data: r.data };
-      } catch (e) {
-        results[key] = { status: e.response?.status, data: e.response?.data, msg: e.message };
-      }
-    }
+  // Doğru endpoint testi
+  try {
+    const r = await axios.post(`${SCRAPER_URL}/api/v1/jobs`, {
+      name: 'test-job', keywords: 'restoran Kadıköy İstanbul',
+      lang: 'en', depth: 1, fastmode: true, email: false, maxtime: '2m',
+    }, { timeout: 6000 });
+    results['POST /api/v1/jobs (correct)'] = { status: r.status, data: r.data };
+  } catch (e) {
+    results['POST /api/v1/jobs (correct)'] = { status: e.response?.status, data: e.response?.data, msg: e.message };
   }
   res.json(results);
 }
