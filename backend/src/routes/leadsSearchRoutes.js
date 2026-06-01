@@ -168,6 +168,30 @@ async function runSearchJobs(queryId, queries, options) {
   }
 }
 
+// GET /api/leads-search/debug — gosom API'sini probe et
+router.get('/debug', async (req, res) => {
+  const results = {};
+  try {
+    const h = await axios.get(`${SCRAPER_URL}/api/v1/health`, { timeout: 4000 });
+    results.health = h.data;
+  } catch (e) { results.health = e.message; }
+
+  for (const method of ['post', 'get']) {
+    for (const path of ['/api/v1/scrape', '/api/v1/jobs', '/api/v1/job', '/api/v1/search']) {
+      const key = `${method.toUpperCase()} ${path}`;
+      try {
+        const r = method === 'post'
+          ? await axios.post(`${SCRAPER_URL}${path}`, { keyword: 'test' }, { timeout: 4000 })
+          : await axios.get(`${SCRAPER_URL}${path}`, { timeout: 4000 });
+        results[key] = { status: r.status, data: r.data };
+      } catch (e) {
+        results[key] = { status: e.response?.status, data: e.response?.data, msg: e.message };
+      }
+    }
+  }
+  res.json(results);
+});
+
 // POST /api/leads-search/search — hemen queryId döner, arka planda çalışır
 router.post('/search', async (req, res) => {
   const { city, districts, categories, options = {} } = req.body;
