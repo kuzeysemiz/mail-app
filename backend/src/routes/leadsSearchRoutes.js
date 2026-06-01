@@ -3,6 +3,7 @@ const router = express.Router();
 const axios = require('axios');
 const cheerio = require('cheerio');
 const crypto = require('crypto');
+const https = require('https');
 
 const FSQ_BASE = 'https://api.foursquare.com/v3/places/search';
 const EMAIL_REGEX = /[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/g;
@@ -62,15 +63,33 @@ async function scrapeEmails(websiteUrl) {
   return [...emails];
 }
 
-async function foursquareSearch(query, near) {
+function foursquareSearch(query, near) {
   const apiKey = process.env.FOURSQUARE_API_KEY;
-  if (!apiKey) throw new Error('FOURSQUARE_API_KEY tanımlı değil');
-  const resp = await axios.get(FSQ_BASE, {
-    params: { query, near, limit: 50, fields: 'fsq_id,name,location,tel,website,rating,stats' },
-    headers: { Authorization: apiKey, Accept: 'application/json' },
-    timeout: 10000,
+  if (!apiKey) return Promise.reject(new Error('FOURSQUARE_API_KEY tanımlı değil'));
+
+  return new Promise((resolve, reject) => {
+    const params = new URLSearchParams({ query, near, limit: '50', fields: 'fsq_id,name,location,tel,website,rating,stats' });
+    const options = {
+      hostname: 'api.foursquare.com',
+      path: `/v3/places/search?${params}`,
+      method: 'GET',
+      headers: { Authorization: apiKey, Accept: 'application/json', 'User-Agent': 'Node.js/20' },
+    };
+    const req = https.request(options, (res) => {
+      let data = '';
+      res.on('data', chunk => { data += chunk; });
+      res.on('end', () => {
+        try {
+          const json = JSON.parse(data);
+          if (res.statusCode !== 200) return reject(new Error(`FSQ ${res.statusCode}: ${json.message || data}`));
+          resolve(json.results || []);
+        } catch (e) { reject(new Error(`JSON parse hatası: ${data.slice(0, 100)}`)); }
+      });
+    });
+    req.setTimeout(15000, () => { req.destroy(); reject(new Error('Foursquare timeout')); });
+    req.on('error', reject);
+    req.end();
   });
-  return resp.data.results || [];
 }
 
 async function runSearchJobs(queryId, searchParams) {
