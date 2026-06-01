@@ -13,6 +13,26 @@ const HTTP_HEADERS = {
   'Accept-Language': 'tr-TR,tr;q=0.9,en;q=0.8',
 };
 
+// Şehir bounding box'ları (güney_lat, batı_lon, kuzey_lat, doğu_lon)
+const CITY_BBOX = {
+  'İstanbul':  '40.80,28.50,41.35,29.55',
+  'Ankara':    '39.75,32.55,40.15,33.10',
+  'İzmir':     '38.25,26.90,38.60,27.30',
+  'Bursa':     '40.10,28.80,40.30,29.20',
+  'Antalya':   '36.75,30.55,37.05,30.90',
+  'Adana':     '36.90,35.20,37.10,35.45',
+  'Konya':     '37.80,32.40,37.95,32.60',
+  'Gaziantep': '37.00,37.28,37.15,37.45',
+  'Mersin':    '36.75,34.55,36.90,34.70',
+  'Kayseri':   '38.65,35.40,38.80,35.55',
+  'Eskişehir': '39.73,30.47,39.83,30.57',
+  'Trabzon':   '40.97,39.68,41.08,39.80',
+  'Sakarya':   '40.70,30.25,40.85,30.45',
+  'Kocaeli':   '40.72,29.85,40.85,30.05',
+  'Diyarbakır':'37.87,40.18,37.96,40.27',
+  'Samsun':    '41.25,36.27,41.37,36.40',
+};
+
 // OSM kategori eşleştirmesi
 const OSM_TAGS = {
   'restoran':   '[amenity=restaurant]',
@@ -79,17 +99,8 @@ async function scrapeEmails(websiteUrl) {
 }
 
 async function overpassSearch(district, city, osmTag) {
-  const areaQuery = `
-    [out:json][timeout:30];
-    area["name"="${district}"]["admin_level"~"^(6|7|8|9)$"]->.district;
-    area["name"="${city}"]["admin_level"~"^(4|5|6)$"]->.city;
-    (
-      node${osmTag}(area.district);
-      node${osmTag}(area.city)["addr:district"="${district}"];
-      way${osmTag}(area.district);
-    );
-    out body 50;
-  `.trim();
+  const bbox = CITY_BBOX[city] || '36.0,26.0,42.0,45.0';
+  const areaQuery = `[out:json][timeout:25];node${osmTag}["name"](${bbox});out body 50;`;
 
   const resp = await axios.post(OVERPASS_URL, `data=${encodeURIComponent(areaQuery)}`, {
     headers: {
