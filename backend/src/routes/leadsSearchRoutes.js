@@ -168,8 +168,8 @@ async function runSearchJobs(queryId, queries, options) {
   }
 }
 
-// GET /api/leads-search/debug — gosom API'sini probe et
-router.get('/debug', async (req, res) => {
+// GET /api/leads-search/debug — gosom API probe (auth gerekmez, geçici)
+async function debugHandler(req, res) {
   const results = {};
   try {
     const h = await axios.get(`${SCRAPER_URL}/api/v1/health`, { timeout: 4000 });
@@ -190,7 +190,7 @@ router.get('/debug', async (req, res) => {
     }
   }
   res.json(results);
-});
+}
 
 // POST /api/leads-search/search — hemen queryId döner, arka planda çalışır
 router.post('/search', async (req, res) => {
@@ -232,3 +232,4 @@ router.get('/status/:queryId', (req, res) => {
 });
 
 module.exports = router;
+module.exports.debugHandler = debugHandler;
