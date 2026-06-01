@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { Search, Building2, MapPin, Phone, Globe, Mail, Copy, Check, AlertCircle } from "lucide-react";
+import { Search, Building2, MapPin, Phone, Globe, Mail, Copy, Check, AlertCircle, Star } from "lucide-react";
 import { leadsSearchAPI } from "@/services/api";
 
 type Business = {
@@ -8,6 +8,8 @@ type Business = {
   address: string;
   phone: string;
   website: string;
+  rating: number | null;
+  reviewCount: number;
   emails: string[];
 };
 
@@ -51,7 +53,7 @@ export default function LeadsSearch() {
     <div className="max-w-5xl mx-auto space-y-6">
       <div>
         <h1 className="text-xl font-bold text-foreground">İşletme Veri Toplama</h1>
-        <p className="text-sm text-muted-foreground mt-1">Şehir ve kategori girerek işletmelerin iletişim bilgilerini bulun.</p>
+        <p className="text-sm text-muted-foreground mt-1">Şehir ve kategori girerek işletmelerin iletişim bilgilerini bulun. Arama 30–60 saniye sürebilir.</p>
       </div>
 
       {/* Arama formu */}
@@ -115,6 +117,15 @@ export default function LeadsSearch() {
                   <Building2 size={15} className="text-primary mt-0.5 shrink-0" />
                   <p className="text-sm font-semibold text-foreground leading-snug">{b.name || "—"}</p>
                 </div>
+
+                {/* Rating */}
+                {b.rating && (
+                  <div className="flex items-center gap-1">
+                    <Star size={11} className="text-yellow-400 fill-yellow-400" />
+                    <span className="text-xs text-muted-foreground">{b.rating.toFixed(1)}</span>
+                    {b.reviewCount > 0 && <span className="text-xs text-muted-foreground/60">({b.reviewCount})</span>}
+                  </div>
+                )}
 
                 <div className="space-y-1.5 text-xs">
                   {/* Adres */}
