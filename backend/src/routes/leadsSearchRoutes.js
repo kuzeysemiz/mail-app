@@ -69,13 +69,13 @@ async function scrapeEmails(websiteUrl) {
 }
 
 // Scraper hazır olana kadar bekle (Chrome başlaması için zaman gerekebilir)
-async function waitForScraper(maxAttempts = 8) {
+async function waitForScraper(maxAttempts = 5) {
   for (let i = 0; i < maxAttempts; i++) {
     try {
-      await axios.get(`${SCRAPER_URL}/api/v1/health`, { timeout: 5000 });
+      await axios.get(`${SCRAPER_URL}/api/v1/health`, { timeout: 3000 });
       return true;
     } catch {
-      if (i < maxAttempts - 1) await sleep(4000);
+      if (i < maxAttempts - 1) await sleep(3000);
     }
   }
   return false;
