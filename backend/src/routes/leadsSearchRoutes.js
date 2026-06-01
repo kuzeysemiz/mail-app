@@ -91,8 +91,8 @@ async function overpassSearch(district, city, osmTag) {
     out body 50;
   `.trim();
 
-  const resp = await axios.post(OVERPASS_URL, areaQuery, {
-    headers: { 'Content-Type': 'text/plain' },
+  const resp = await axios.post(OVERPASS_URL, `data=${encodeURIComponent(areaQuery)}`, {
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     timeout: 35000,
   });
 
