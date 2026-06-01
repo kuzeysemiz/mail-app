@@ -81,24 +81,24 @@ async function submitJob(keyword) {
     keywords: [keyword],
     lang: 'en',
     depth: 3,
-    fastmode: true,
+    fast_mode: true,
     email: false,
     max_time: 300000000000,
   }, { timeout: 10000 });
-  // API yanıtında id alanı farklı isimde olabilir
-  return resp.data.id || resp.data.job_id || resp.data.ID;
+  return resp.data.id || resp.data.ID || resp.data.job_id;
 }
 
-async function pollJob(jobId, timeoutMs = 120_000) {
+async function pollJob(jobId, timeoutMs = 150_000) {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
-    await sleep(3000);
+    await sleep(4000);
     try {
       const resp = await axios.get(`${SCRAPER_URL}/api/v1/jobs/${jobId}`, { timeout: 10000 });
       const data = resp.data;
-      const status = (data.status || '').toLowerCase();
+      // gosom Status alanı büyük harfle başlıyor
+      const status = (data.Status || data.status || '').toLowerCase();
       if (['completed', 'done', 'finished'].includes(status)) {
-        return data.results || data.data || [];
+        return data.Results || data.results || data.Data?.results || [];
       }
       if (['failed', 'error', 'cancelled'].includes(status)) return [];
     } catch { /* geçici hata */ }
@@ -196,9 +196,10 @@ async function debugHandler(req, res) {
 
     const jobId = r.data?.id || r.data?.job_id || r.data?.ID;
     if (jobId) {
-      await new Promise(res => setTimeout(res, 5000));
+      // 30 saniye bekle — job'un tamamlanması için
+      await new Promise(res => setTimeout(res, 30000));
       const s = await axios.get(`${SCRAPER_URL}/api/v1/jobs/${jobId}`, { timeout: 6000 });
-      results[`GET /api/v1/jobs/${jobId}`] = { status: s.status, data: s.data };
+      results[`GET /api/v1/jobs/${jobId} (after 30s)`] = { status: s.status, data: s.data };
     }
   } catch (e) {
     results['POST /api/v1/jobs'] = { status: e.response?.status, data: e.response?.data, msg: e.message };
