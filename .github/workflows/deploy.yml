@@ -67,7 +67,7 @@ jobs:
             docker pull ghcr.io/kuzeysemiz/mail-app-api:latest
             docker pull ghcr.io/kuzeysemiz/mail-app-web:latest
             docker logout ghcr.io
-            docker pull gosom/google-maps-scraper:latest
+            docker pull gosom/google-maps-scraper:latest || echo "⚠️ gosom pull başarısız, devam ediliyor"
             docker stop mail_api mail_web maps_scraper 2>/dev/null || true
             docker rm mail_api mail_web maps_scraper 2>/dev/null || true
             docker network create mail_network 2>/dev/null || true
@@ -87,12 +87,17 @@ jobs:
               -p 10000:10000 \
               ghcr.io/kuzeysemiz/mail-app-web:latest
             mkdir -p ~/gmaps-data
-            docker run -d --name maps_scraper --restart always \
-              --network mail_network \
-              --network-alias maps-scraper \
-              -v ~/gmaps-data:/gmapsdata \
-              gosom/google-maps-scraper:latest \
-              -data-folder /gmapsdata
+            if docker image inspect gosom/google-maps-scraper:latest >/dev/null 2>&1; then
+              docker run -d --name maps_scraper --restart always \
+                --network mail_network \
+                --network-alias maps-scraper \
+                -v ~/gmaps-data:/gmapsdata \
+                gosom/google-maps-scraper:latest \
+                -data-folder /gmapsdata
+              echo "✅ maps_scraper başlatıldı"
+            else
+              echo "⚠️ maps_scraper image yok, atlandı"
+            fi
             sleep 5
             docker ps
             echo "--- mail_web logs ---"
