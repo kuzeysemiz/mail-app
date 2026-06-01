@@ -78,7 +78,7 @@ async function waitForScraper(maxAttempts = 5) {
 async function submitJob(keyword) {
   const resp = await axios.post(`${SCRAPER_URL}/api/v1/jobs`, {
     name: keyword.substring(0, 60),
-    keywords: keyword,
+    keywords: [keyword],
     lang: 'en',
     depth: 3,
     fastmode: true,
@@ -189,7 +189,7 @@ async function debugHandler(req, res) {
   // Doğru endpoint testi
   try {
     const r = await axios.post(`${SCRAPER_URL}/api/v1/jobs`, {
-      name: 'test-job', keywords: 'restoran Kadıköy İstanbul',
+      name: 'test-job', keywords: ['restoran Kadıköy İstanbul'],
       lang: 'en', depth: 1, fastmode: true, email: false, maxtime: '2m',
     }, { timeout: 6000 });
     results['POST /api/v1/jobs (correct)'] = { status: r.status, data: r.data };
