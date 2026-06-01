@@ -89,7 +89,8 @@ async function waitForScraper(maxAttempts = 5) {
 }
 
 async function submitJob(keyword, city) {
-  const geo = CITY_COORDS[city] || '39.9334,32.8597'; // default: Ankara
+  const geo = CITY_COORDS[city] || '39.9334,32.8597';
+  const [lat, lon] = geo.split(',');
   const resp = await axios.post(`${SCRAPER_URL}/api/v1/jobs`, {
     name: keyword.substring(0, 60),
     keywords: [keyword],
@@ -98,7 +99,8 @@ async function submitJob(keyword, city) {
     fast_mode: true,
     email: false,
     max_time: 300000000000,
-    geo_coordinates: geo,
+    lat,
+    lon,
     zoom: 13,
   }, { timeout: 10000 });
   return resp.data.id || resp.data.ID || resp.data.job_id;
@@ -207,7 +209,7 @@ async function debugHandler(req, res) {
     const r = await axios.post(`${SCRAPER_URL}/api/v1/jobs`, {
       name: 'debug-job', keywords: ['restoran Kadıköy İstanbul'],
       lang: 'en', depth: 1, fast_mode: true, email: false, max_time: 300000000000,
-      geo_coordinates: '41.0082,28.9784', zoom: 13,
+      lat: '41.0082', lon: '28.9784', zoom: 13,
     }, { timeout: 6000 });
     results['POST /api/v1/jobs'] = { status: r.status, data: r.data };
 
