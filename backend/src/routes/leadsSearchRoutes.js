@@ -186,15 +186,22 @@ async function debugHandler(req, res) {
     results.health = h.data;
   } catch (e) { results.health = e.message; }
 
-  // Doğru endpoint testi
+  // Job oluştur ve status'unu kontrol et
   try {
     const r = await axios.post(`${SCRAPER_URL}/api/v1/jobs`, {
-      name: 'test-job', keywords: ['restoran Kadıköy İstanbul'],
-      lang: 'en', depth: 1, fastmode: true, email: false, maxtime: '2m',
+      name: 'debug-job', keywords: ['restoran Kadıköy İstanbul'],
+      lang: 'en', depth: 1, fastmode: true, email: false, max_time: 120000000000,
     }, { timeout: 6000 });
-    results['POST /api/v1/jobs (correct)'] = { status: r.status, data: r.data };
+    results['POST /api/v1/jobs'] = { status: r.status, data: r.data };
+
+    const jobId = r.data?.id || r.data?.job_id || r.data?.ID;
+    if (jobId) {
+      await new Promise(res => setTimeout(res, 5000));
+      const s = await axios.get(`${SCRAPER_URL}/api/v1/jobs/${jobId}`, { timeout: 6000 });
+      results[`GET /api/v1/jobs/${jobId}`] = { status: s.status, data: s.data };
+    }
   } catch (e) {
-    results['POST /api/v1/jobs (correct)'] = { status: e.response?.status, data: e.response?.data, msg: e.message };
+    results['POST /api/v1/jobs'] = { status: e.response?.status, data: e.response?.data, msg: e.message };
   }
   res.json(results);
 }
