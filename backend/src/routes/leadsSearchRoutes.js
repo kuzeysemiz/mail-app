@@ -83,14 +83,21 @@ async function runSearchJobs(queryId, searchParams) {
     const allResults = await Promise.allSettled(
       districts.flatMap(district =>
         categories.map(cat =>
-          foursquareSearch(cat.query, `${district}, ${city}`)
+          foursquareSearch(cat.query, `${district}, ${city}, Turkey`)
         )
       )
     );
 
+    const firstError = allResults.find(r => r.status === 'rejected');
     const merged = allResults
       .filter(r => r.status === 'fulfilled')
       .flatMap(r => r.value);
+
+    if (merged.length === 0 && firstError) {
+      job.status = 'error';
+      job.error = `Foursquare hatası: ${firstError.reason?.response?.data?.message || firstError.reason?.message || 'bilinmeyen hata'}`;
+      return;
+    }
 
     // Deduplicate
     const seen = new Set();
