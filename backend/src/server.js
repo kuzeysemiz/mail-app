@@ -22,8 +22,9 @@ const creditsRoutes    = require('./routes/creditsRoutes');
 const adminRoutes      = require('./routes/adminRoutes');
 const paddle           = require('./routes/paddleRoutes');
 const bounceDetection  = require('./services/bounceDetectionService');
-const inboxRoutes      = require('./routes/inboxRoutes');
-const inboxScan        = require('./services/inboxScanService');
+const inboxRoutes        = require('./routes/inboxRoutes');
+const inboxScan          = require('./services/inboxScanService');
+const leadsSearchRoutes  = require('./routes/leadsSearchRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 10001;
@@ -59,7 +60,8 @@ app.get('/api/admin/credits/confirm/:token', adminRoutes.confirmCreditsHandler);
 app.use('/api/admin',     requireAuth, adminRoutes);
 app.use('/api/deploy',    requireAuth, deployRoutes);
 app.use('/api/paddle',    requireAuth, paddle.router);
-app.use('/api/inbox',     requireAuth, inboxRoutes);
+app.use('/api/inbox',        requireAuth, inboxRoutes);
+app.use('/api/leads-search', requireAuth, leadsSearchRoutes);
 
 // Error handling
 app.use((err, req, res, next) => {

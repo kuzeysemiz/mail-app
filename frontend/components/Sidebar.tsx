@@ -1,5 +1,5 @@
 "use client";
-import { Mail, Plus, List, BarChart2, Monitor, X, ShieldAlert, Settings2, Coins, Inbox } from "lucide-react";
+import { Mail, Plus, List, BarChart2, Monitor, X, ShieldAlert, Settings2, Coins, Inbox, DatabaseZap } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const NAV_ITEMS = [
@@ -9,8 +9,9 @@ const NAV_ITEMS = [
   { id: "logs",      label: "Loglar",         icon: BarChart2 },
   { id: "inbox",     label: "Gelen Kutusu",   icon: Inbox },
   { id: "blacklist", label: "Kara Liste",     icon: ShieldAlert },
-  { id: "devices",   label: "Bağlı Cihazlar", icon: Monitor },
-  { id: "credits",   label: "Krediler",       icon: Coins },
+  { id: "devices",       label: "Bağlı Cihazlar", icon: Monitor },
+  { id: "leads-search", label: "Lead Bul",       icon: DatabaseZap },
+  { id: "credits",      label: "Krediler",       icon: Coins },
 ];
 
 interface Props {

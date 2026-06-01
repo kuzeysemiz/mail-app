@@ -19,6 +19,7 @@ const DeviceManager      = dynamic(() => import("@/components/DeviceManager"),  
 const AdminPanel         = dynamic(() => import("@/components/AdminPanel"),         { ssr: false });
 const CreditsPanel       = dynamic(() => import("@/components/CreditsPanel"),       { ssr: false });
 const InboxPanel         = dynamic(() => import("@/components/InboxPanel"),         { ssr: false });
+const LeadsSearch        = dynamic(() => import("@/components/LeadsSearch"),        { ssr: false });
 
 type Screen = "loading" | "login" | "register" | "admin-otp" | "app";
 
@@ -31,8 +32,9 @@ const PAGE_TITLES: Record<string, string> = {
   blacklist: "Kara Liste & Beyaz Liste",
   deploy:    "Deploy Monitörü",
   devices:   "Bağlı Cihazlar",
-  admin:     "Yönetici Paneli",
-  credits:   "Krediler",
+  admin:          "Yönetici Paneli",
+  "leads-search": "Lead Bul",
+  credits:        "Krediler",
 };
 
 export default function Home() {
@@ -203,7 +205,8 @@ export default function Home() {
           {activeTab === "devices"   && <DeviceManager />}
           {activeTab === "admin"     && <AdminPanel currentUserId={currentUserId} currentUserPermissions={currentUserPermissions} />}
           {activeTab === "inbox"     && <InboxPanel key={inboxOpenKey} onUnreadChange={setUnreadInbox} autoOpenUnread={inboxAutoOpen} />}
-          {activeTab === "credits"   && <CreditsPanel onCreditsChange={setCredits} />}
+          {activeTab === "leads-search" && <LeadsSearch />}
+          {activeTab === "credits"      && <CreditsPanel onCreditsChange={setCredits} />}
         </main>
       </div>
     </div>

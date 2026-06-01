@@ -192,4 +192,8 @@ export const authSessionAPI = {
   logout: () => api.post("/auth/logout").catch(() => {}),
 };
 
+export const leadsSearchAPI = {
+  search: (query: string) => api.post("/leads-search/search", { query }),
+};
+
 export default api;
