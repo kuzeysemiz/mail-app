@@ -4,7 +4,7 @@ const axios = require('axios');
 const cheerio = require('cheerio');
 const crypto = require('crypto');
 
-const OVERPASS_URL = 'https://overpass-api.de/api/interpreter';
+const OVERPASS_URL = 'https://overpass.kumi.systems/api/interpreter';
 const EMAIL_REGEX = /[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/g;
 const INVALID_EXTS = /\.(png|jpg|jpeg|gif|svg|webp|pdf|zip|js|css|woff|ttf)$/i;
 const SCRAPE_TIMEOUT = 8000;
@@ -92,7 +92,10 @@ async function overpassSearch(district, city, osmTag) {
   `.trim();
 
   const resp = await axios.post(OVERPASS_URL, `data=${encodeURIComponent(areaQuery)}`, {
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+      'User-Agent': 'MailSistemi/1.0 (lead-search; contact@ms.kuzeysemiz.com)',
+    },
     timeout: 35000,
   });
 
