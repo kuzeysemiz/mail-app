@@ -83,7 +83,7 @@ async function submitJob(keyword) {
     depth: 3,
     fastmode: true,
     email: false,
-    maxtime: '5m',
+    max_time: '5m',
   }, { timeout: 10000 });
   // API yanıtında id alanı farklı isimde olabilir
   return resp.data.id || resp.data.job_id || resp.data.ID;
